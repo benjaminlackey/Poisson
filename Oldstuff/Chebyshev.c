@@ -1,0 +1,146 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define PI 3.141592653589793
+
+void chebfit(float a, float b, float *c, int n, float (*func)(float));
+float chebeval(float a, float b, float *c, int m, float x);
+float testfunc(float x);
+void chebderiv(float a, float b, float *c, float *cderiv, int n);
+void chebint(float a, float b, float *c, float *cint, int n);
+float rho(float r, float theta, float phi);
+
+
+main()
+{
+  int order;
+  float coeff[100];
+  float coeffder[100];
+  float coeffint[100];
+  float x, start, end;
+  int i;
+
+  order = 8;
+  start = -1.0;
+  end = 1.0;
+
+  /*MAKE SURE YOU UNDERSTAND WHAT ORDER MEANS EVERYWHERE*/
+  chebfit(start, end, &coeff[0], order, testfunc);
+  for(i=0; i<order; i++)
+    printf("%f\n", coeff[i]);
+  
+  /*chebderiv(start, end, &coeff[0], &coeffder[0], order);*/
+  
+/*   chebint(start, end, &coeff[0], &coeffint[0], order); */
+
+ /*  for(x=start; x<=end; x+=0.1) */
+/*     printf("%f\t%f\n", x, chebeval(start, end, &coeffint[0], order, x)); */
+
+/*   for(x=start; x<=end; x+=0.1)  */
+/*     printf("%f\t%f\n", x, chebeval(start, end, &coeffder[0], order-1, x)); */
+  
+
+  /* for(x=start; x<=end; x+=0.1) */
+/*     printf("%f\t%f\n", x, chebeval(start, end, &coeff[0], order, x)); */
+
+  /* printf("%f\n", chebeval(-2, 6, &coeff[0], order, 1));*/
+}
+
+float testfunc(float x)
+{
+  /*return pow(x, 4)*exp(-x*x);*/
+  return exp(x)-4*exp(1)/(1+exp(2));
+} 
+
+float rho(float r, float theta, float phi)
+{
+  return r*(3*pow(cos(theta), 2)-1 + pow(sin(theta), 2)*cos(theta)*cos(2*phi));
+}
+
+void chebfit(float a, float b, float *c, int n, float (*func)(float))
+{
+  /*printf("Hello world.");*/
+  int k, j;
+  float fac, bpa, bma, *f;
+  
+  f = malloc(sizeof(float)*n);
+  
+  bma = 0.5*(b-a); /*Width of right side of range.*/
+  bpa = 0.5*(b+a); /*Midpoint of range.*/
+  
+  for(k=0; k<n; k++){
+    float zero_scaled = cos(PI*(k+0.5)/n); /*Find kth zero of T_n on [-1, 1]*/
+    float zero = zero_scaled*bma + bpa; 
+    f[k] = (*func)(zero);
+    /*f[k] = exp(-zero)+zero;*/ /*Function value at each zero.*/
+  }
+  
+  fac = 2.0/n; /*Factor in front of summation term.*/
+  
+  /*Evaluate coefficient c[j] for each T_j.*/
+  for(j=0; j<n; j++){
+    double sum = 0.0;
+    for(k=0; k<n; k++)
+      sum += f[k]*cos(PI*j*(k+0.5)/n);
+    c[j] = fac*sum;
+    /*printf("%f", c[j]);*/
+  }
+  free(f);
+}	
+
+float chebeval(float a, float b, float *c, int m, float x)
+{
+  float d=0.0, dd=0.0, sv, y, y2;
+  int j;
+  
+  if ((x-a)*(x-b) > 0.0)
+    printf("x is not between a and b");
+  
+  y = (2.0*x-a-b)/(b-a);
+  y2 = 2.0*y;
+ 
+  for(j=m-1; j>=1; j--){
+    sv = d;
+    d = y2*d-dd+c[j];
+    dd = sv;
+  }
+
+  return y*d-dd+0.5*c[0];
+}
+
+void chebderiv(float a, float b, float *c, float *cderiv, int n)
+{
+  int j;
+  float con;
+
+  cderiv[n-1] = 0.0;
+  cderiv[n-2] = 2*(n-1)*c[n-1];
+
+  for(j=n-3; j>=0; j--)
+    cderiv[j] = cderiv[j+2] + 2*(j+1)*c[j+1];
+  
+  con = 2.0/(b-a);
+
+  for(j=0; j<n; j++)
+    cderiv[j] *= con;
+}
+
+
+void chebint(float a, float b, float *c, float *cint, int n)
+{
+  int j;
+  float sum=0.0, fac=1.0, con;
+
+  con = 0.25*(b-a);
+  for(j=1; j<=n-2; j++){
+    cint[j] = con*(c[j-1] - c[j+1])/j;
+    sum += fac*cint[j];
+    fac = -fac;
+  }
+
+  cint[n-1] = con*c[n-2]/(n-1);
+  sum += fac*cint[n-1];
+  cint[0] = 2.0*sum;
+}
+

@@ -1,0 +1,193 @@
+(* Content-type: application/mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 6.0' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       145,          7]
+NotebookDataLength[      6162,        184]
+NotebookOptionsPosition[      5489,        156]
+NotebookOutlinePosition[      5822,        171]
+CellTagsIndexPosition[      5779,        168]
+WindowFrame->Normal
+ContainsDynamic->False*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{"n", "=", "16"}], ";"}], "\[IndentingNewLine]", 
+ RowBox[{"Table", "[", 
+  RowBox[{
+   RowBox[{"Cos", "[", 
+    RowBox[{"\[Pi]", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{"i", "-", "0.25"}], ")"}], "/", 
+      RowBox[{"(", 
+       RowBox[{"n", "+", "0.5"}], ")"}]}]}], "]"}], ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"i", ",", " ", "1", ",", " ", "n"}], "}"}]}], 
+  "]"}], "\[IndentingNewLine]", 
+ RowBox[{"Table", "[", 
+  RowBox[{
+   RowBox[{"x", "/.", 
+    RowBox[{"FindRoot", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"LegendreP", "[", 
+        RowBox[{"n", ",", " ", "x"}], "]"}], "\[Equal]", "0"}], ",", " ", 
+      RowBox[{"{", 
+       RowBox[{"x", ",", " ", 
+        RowBox[{"Cos", "[", 
+         RowBox[{"\[Pi]", 
+          RowBox[{
+           RowBox[{"(", 
+            RowBox[{"i", "-", "0.25"}], ")"}], "/", 
+           RowBox[{"(", 
+            RowBox[{"n", "+", "0.5"}], ")"}]}]}], "]"}]}], "}"}]}], "]"}]}], 
+   ",", " ", 
+   RowBox[{"{", 
+    RowBox[{"i", ",", " ", "1", ",", " ", "n"}], "}"}]}], "]"}]}], "Input",
+ CellChangeTimes->{{3.443469165304676*^9, 3.44346917365044*^9}, {
+  3.443469250138524*^9, 3.443469255263663*^9}, {3.443469364799243*^9, 
+  3.443469471424973*^9}, {3.44346977315514*^9, 3.443469806063492*^9}, {
+  3.443490177588143*^9, 3.443490197956207*^9}, {3.443492075236161*^9, 
+  3.44349207534832*^9}}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "0.9898214418809327`", ",", "0.9450008187146685`", ",", 
+   "0.8660254037844386`", ",", "0.7557495743542583`", ",", 
+   "0.6181589862206052`", ",", "0.45822652172741046`", ",", 
+   "0.2817325568414296`", ",", "0.09505604330418259`", ",", 
+   RowBox[{"-", "0.09505604330418248`"}], ",", 
+   RowBox[{"-", "0.28173255684142967`"}], ",", 
+   RowBox[{"-", "0.45822652172741035`"}], ",", 
+   RowBox[{"-", "0.6181589862206053`"}], ",", 
+   RowBox[{"-", "0.7557495743542582`"}], ",", 
+   RowBox[{"-", "0.8660254037844387`"}], ",", 
+   RowBox[{"-", "0.9450008187146685`"}], ",", 
+   RowBox[{"-", "0.9898214418809327`"}]}], "}"}]], "Output",
+ CellChangeTimes->{{3.443469784870949*^9, 3.443469807402095*^9}, 
+   3.443488438100183*^9, {3.443490182045484*^9, 3.443490198770226*^9}, 
+   3.443492079902088*^9}],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"FindRoot", "::", "\<\"lstol\"\>"}], 
+  RowBox[{
+  ":", " "}], "\<\"The line search decreased the step size to within \
+tolerance specified by AccuracyGoal and PrecisionGoal but was unable to find \
+a sufficient decrease in the merit function.  You may need more than \
+\\!\\(MachinePrecision\\) digits of working precision to meet these \
+tolerances. \\!\\(\\*ButtonBox[\\\"\[RightSkeleton]\\\", \
+ButtonStyle->\\\"Link\\\", ButtonFrame->None, \
+ButtonData:>\\\"paclet:ref/message/FindRoot/lstol\\\", ButtonNote -> \
+\\\"FindRoot::lstol\\\"]\\)\"\>"}]], "Message", "MSG",
+ CellChangeTimes->{3.443492100664217*^9}],
+
+Cell[BoxData[
+ RowBox[{"{", 
+  RowBox[{
+  "0.9894009349915753`", ",", "0.9445750230732254`", ",", 
+   "0.8656312023879078`", ",", "0.7554044083549906`", ",", 
+   "0.6178762444026534`", ",", "0.4580167776572277`", ",", 
+   "0.28160355077925875`", ",", "0.09501250983763744`", ",", 
+   RowBox[{"-", "0.09501250983763744`"}], ",", 
+   RowBox[{"-", "0.28160355077925886`"}], ",", 
+   RowBox[{"-", "0.45801677765722854`"}], ",", 
+   RowBox[{"-", "0.6178762444026458`"}], ",", 
+   RowBox[{"-", "0.7554044083550385`"}], ",", 
+   RowBox[{"-", "0.8656312023877896`"}], ",", 
+   RowBox[{"-", "0.9445750230732254`"}], ",", 
+   RowBox[{"-", "0.9894009349915753`"}]}], "}"}]], "Output",
+ CellChangeTimes->{{3.443469784870949*^9, 3.443469807402095*^9}, 
+   3.443488438100183*^9, {3.443490182045484*^9, 3.443490198770226*^9}, 
+   3.443492100670159*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"LegendreP", "[", 
+  RowBox[{"n", ",", " ", "0.183750"}], "]"}]], "Input",
+ CellChangeTimes->{{3.443488442991366*^9, 3.443488454362129*^9}, {
+  3.443488638088276*^9, 3.443488642312077*^9}}],
+
+Cell[BoxData["0.2563539222075929`"], "Output",
+ CellChangeTimes->{3.443488492986366*^9, 3.443488643311372*^9, 
+  3.443490209968952*^9}]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ RowBox[{"N", "[", 
+  RowBox[{
+   RowBox[{"SphericalHarmonicY", "[", 
+    RowBox[{"17", ",", "8", ",", "3.1", ",", "0"}], "]"}], ",", " ", "18"}], 
+  "]"}]], "Input",
+ CellChangeTimes->{{3.443651863176402*^9, 3.44365187055127*^9}, {
+  3.443652073917854*^9, 3.443652102391627*^9}, {3.443652193805759*^9, 
+  3.443652202202705*^9}},
+ CellID->578495464],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"-", "9.340146960595261`*^-9"}], "+", 
+  RowBox[{"0``26.180161288232146", " ", "\[ImaginaryI]"}]}]], "Output",
+ CellChangeTimes->{3.443652063450739*^9, 3.443652151388994*^9, 
+  3.443652203294331*^9}]
+}, Open  ]],
+
+Cell[BoxData[
+ RowBox[{
+  RowBox[{"-", "9.340146960595261`*^-9"}], "+", 
+  RowBox[{"0``26.180161288232146", " ", "\[ImaginaryI]"}]}]], "Input"]
+},
+WindowSize->{640, 750},
+WindowMargins->{{312, Automatic}, {Automatic, 87}},
+FrontEndVersion->"6.0 for Linux x86 (32-bit) (June 2, 2008)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[590, 23, 1383, 39, 80, "Input"],
+Cell[1976, 64, 837, 17, 63, "Output"],
+Cell[2816, 83, 648, 12, 105, "Message"],
+Cell[3467, 97, 837, 17, 63, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4341, 119, 212, 4, 28, "Input"],
+Cell[4556, 125, 135, 2, 28, "Output"]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[4728, 132, 363, 9, 28, "Input",
+ CellID->578495464],
+Cell[5094, 143, 233, 5, 32, "Output"]
+}, Open  ]],
+Cell[5342, 151, 143, 3, 28, "Input"]
+}
+]
+*)
+
+(* End of internal cache information *)

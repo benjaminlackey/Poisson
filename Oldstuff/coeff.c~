@@ -1,0 +1,149 @@
+/* gcc -g -pedantic -Wall coeff.c */
+
+/* should use calloc instead of alloc to set all coefficients to zero initially */ 
+/* make error checking optional */
+/* make functions inline */
+
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct 
+{
+  int nz;
+  int nn;
+  int nl;
+  double *data;
+} coeff;
+
+coeff *coeff_alloc(int z, int n, int L);
+void coeff_set(coeff *c, int z, int n, int L, int m, double x);
+double coeff_get(coeff *c, int z, int n, int L, int m);
+void print_coeff(coeff *c);
+
+int main(void)
+{
+  int i, z, n, L, m;
+  int nz = 3;
+  int nn = 3;
+  int nl = 4;
+  coeff *c_znlm = coeff_alloc(nz, nn, nl);
+  
+  /* printf("hi4\n"); */
+  /* printf("%d\n", c_znlm->nm); */
+  /* c_znlm->data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11}; */
+  /* coeff_set(c_znlm, 0, 0, 0, 0, 9.7); */
+  
+  i=0;
+  for(z=0; z<nz; z++) 
+    for(n=0; n<nn; n++) 
+      for(L=0; L<nl; L++) 
+		for(m=-L; m<=L; m++) {
+		  printf("i=%d\n", i);
+		  coeff_set(c_znlm, z, n, L, m, i); 
+		  printf("%d\t%d\t%d\t%d\t%f\n", z, n, L, m, coeff_get(c_znlm, z, n, L, m));
+		  i++;
+		}
+  
+  /*   printf("%d\n", i); */
+  /*   for(j=0; j<i; j++) */
+  /* 	printf("%d\t%f\n", j, c_znlm->data[j]); */
+  
+/*   for(z=0; z<2; z++)  */
+/*     for(n=0; n<2; n++)  */
+/*       for(L=0; L<1; L++)  */
+/* 	for(m=0; m<3; m++) */
+/* 	  printf("%d\t%d\t%d\t%d\t%f\n", z, n, L, m, coeff_get(c_znlm, z, n, L, m)); */
+  
+  print_coeff(c_znlm);
+
+  return 0;
+}
+
+/*****************************************/
+/* Allocate memory to store coefficients */
+/* and return a pointer to the memory.   */
+/*****************************************/
+coeff *coeff_alloc(int nz, int nn, int nl)
+{
+  /* z goes from 0 to nz-1 */
+  /* n goes from 0 to nn-1 */
+  /* l goes from 0 to lmax=nl-1 */
+  /* m goes from -l to l for l */
+  
+  coeff *c;
+  double *data;
+  
+  /* sizeof(coeff) is the number of bytes needed to store 3 integers
+     and the address of data.  Memory for the actual data is not
+     allocated here: */
+  c = (coeff *)malloc(sizeof(coeff));
+  
+  /* Memory for the data is allocated here: */
+  /* If -l <= m <= l for each l, there are (lmax+1)^2 elements
+	 for each n and z (or nl^2 elements where nl=lmax+1). */
+  data = (double *)malloc(sizeof(double)*nz*nn*nl*nl);
+  
+  c->nz = nz;
+  c->nn = nn;
+  c->nl = nl;
+  c->data = data;
+  
+  return c;
+}
+
+/*****************************/
+/* Set value of c_znlm to x. */
+/*****************************/
+/*extern inline */
+void coeff_set(coeff *c, int z, int n, int L, int m, double x)
+{ 
+  /* do error checking */
+  if((z >= c->nz)||(n >= c->nn)||(L >= c->nl)||(m > L)||(m < -L))
+    printf("index out of bounds in coeff_set\n");
+  
+  /* index = z*nn*nl^2 + n*nl^2 + L^2 + (m+L)   */
+  /*       = ((z*nn + n)*nl^2 + L^2 + m + L     */
+  c->data[(z*c->nn + n)*c->nl*c->nl + L*L + m + L] = x ;
+}
+
+
+/*****************************/
+/* Get value of c_znlm.      */
+/*****************************/
+/*extern inline */
+double coeff_get(coeff *c, int z, int n, int L, int m)
+{
+  /* do error checking */
+  if((z >= c->nz)||(n >= c->nn)||(L >= c->nl)||(m > L)||(m < -L))
+    printf("index out of bounds in coeff_get\n");
+  
+  return c->data[(z*c->nn + n)*c->nl*c->nl + L*L + m + L];
+} 
+
+
+/*******************************/
+/* Print all the coefficients. */
+/*******************************/
+void print_coeff(coeff *c){
+  int nz = c->nz;
+  int nn = c->nn;
+  int nl = c->nl;
+  int z, n, L, m;
+  
+  for(z=0; z<nz; z++) {
+    printf("zone %d:\n", z);
+    for(n=0; n<nn; n++) {
+      printf("radial basis %d:\n\t", n);
+      for(m=-(nl-1); m<=(nl-1); m++)
+		printf("m=%d\t", m);
+      printf("\n");
+      for(L=0; L<nl; L++) {
+		printf("L=%d:\t", L);
+		for(m=-L; m<=L; m++)
+		  printf("%f\t", coeff_get(c, z, n, L, m));
+		printf("\n");
+      }
+    }
+  }
+  printf("\n");
+}

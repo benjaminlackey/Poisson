@@ -1,0 +1,18 @@
+/*To compile type: gcc -lm -lgsl -lgslcblas -Wall -pedantic -ansi oned5.c */
+/*To write to file type: ./a.out > phigamma2.txt */
+
+/* c headers */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+/* gsl headers */
+#include <gsl/gsl_matrix.h>
+#include <gsl/gsl_blas.h>
+#include <gsl/gsl_linalg.h>
+
+/* constants and simple functions */
+#define PI 3.141592653589793
+#define delta(i, j) (i==j ? 1 : 0) /* \delta_{ij} */
+#define neg1toi(i) (i%2 ? -1 : 1) /* (-1)^i */
+#define cosipiby2(i) (i%2 ? 0 : (i%4==0 ? 1 : -1)) /* cos(i \pi/2) */

@@ -1,0 +1,165 @@
+#include <gsl/gsl_matrix.h>
+
+/* Store coordinates of grid points */
+typedef struct 
+{
+  int nz; /* number of zones */
+  int nr; /* number of points in radial direction per zone */
+  int nt; /* number of points in theta direction */
+  int np; /* number of points in phi direction */
+  double *data;
+} grid3d;
+
+/* Store data at grid points */
+typedef struct 
+{
+  int nz; /* number of zones */
+  int nr; /* number of points in radial direction per zone */
+  int nt; /* number of points in theta direction */
+  int np; /* number of points in phi direction */
+  double *data;
+} scalar3d;
+
+/*  */
+typedef struct 
+{
+  int nz;
+  int nt;
+  int np;
+  double *data;
+} scalar2d;
+
+/* Store coefficients of f(xi, theta, phi) in each zone */
+/* in spherical harmonic basis. */
+typedef struct 
+{
+  int nz;
+  int nr;
+  int nt;
+  int np;
+  double *data;
+} ylm_coeff;
+
+/* Store coefficients of f(xi, theta, phi) in each zone */
+/* in spherical harmonic basis. */
+typedef struct 
+{
+  int nz;
+  int nr;
+  int nt;
+  int np;
+  double *data;
+} coeff;
+
+/* Store boundary coefficients of B_z(theta, phi) for each boundary */
+/* in Fourier basis. */
+typedef struct
+{
+  int nz;
+  int nt;
+  int np;
+  double *data;
+} bound_coeff;
+
+#define DEBUG
+
+#define REAL 0 /* Real part of a scalar, coefficient, etc. */
+#define IMAG 1
+#define PI 3.141592653589793
+
+#define delta(i, j) ((i)==(j) ? 1 : 0) /* \delta_{ij} */
+#define neg1toi(i) ((i)%2 ? -1 : 1) /* (-1)^i */
+#define cosipiby2(i) ((i)%2 ? 0 : ((i)%4==0 ? 1 : -1)) /* \cos(i\pi/2) */
+
+/* allocate, set, get */
+grid3d *grid3d_alloc(int nz, int nr, int nt, int np);
+void grid3d_set(grid3d *points, int z, int i, int j, int k, double xi, double theta, double phi);
+double grid3d_get(grid3d *points, int z, int i, int j, int k, int c);
+
+scalar3d *scalar3d_alloc(int nz, int nr, int nt, int np);
+void scalar3d_set(scalar3d *f_zijk, int z, int i, int j, int k, double x);
+double scalar3d_get(scalar3d *f_zijk, int z, int i, int j, int k);
+
+scalar2d *scalar2d_alloc(int nz, int nt, int np);
+void scalar2d_set(scalar2d *b_zjk, int z, int j, int k, double x);
+double scalar2d_get(scalar2d *b_zjk, int z, int j, int k);
+
+ylm_coeff *ylm_coeff_alloc(int nz, int nr, int nt, int np);
+void ylm_coeff_set(ylm_coeff *c, int z, int i, int l, int m, int comp, double x);
+double ylm_coeff_get(ylm_coeff *c, int z, int i, int l, int m, int comp);
+
+coeff *coeff_alloc(int nz, int nr, int nt, int np);
+void coeff_set(coeff *c, int z, int i, int j, int k, int imag, double x);
+double coeff_get(coeff *c, int z, int i, int j, int k, int imag);
+
+bound_coeff *bound_coeff_alloc(int nz, int nt, int np);
+void bound_coeff_set(bound_coeff *b, int z, int j, int k, int i, double x);
+double bound_coeff_get(bound_coeff *b, int z, int j, int k, int i);
+
+
+/* matrix operators */
+void set_x(gsl_matrix *m);
+void set_xinv(gsl_matrix *m);
+void set_dbydx(gsl_matrix *m);
+void set_xmin1inv(gsl_matrix *m);
+
+void set_A_kernel_even(gsl_matrix *A_even, int L);
+void set_A_kernel_odd(gsl_matrix *m, int L);
+void set_A_shell(gsl_matrix *m, int L, double alpha, double beta);
+void set_A_ext(gsl_matrix *m, int L);
+
+/* print vectors, matrices, coefficients, etc. */
+void print_vector(gsl_vector *v);
+void print_matrix(gsl_matrix *m);
+void print_grid3d(grid3d *points);
+void print_scalar2d(scalar2d *b);
+void print_scalar3d(scalar3d *f);
+void print_coeff(coeff *c);
+void print_coeff_2(coeff *c);
+void print_bound_coeff(bound_coeff *b);
+
+/* functions for making grid, decomposing into basis functions */
+void legendre_zero_weight(gsl_vector *zeros, gsl_vector *weights);
+/*double source(int zone, double r, double theta, double phi);
+  double boundary(int zone, double theta, double phi);*/
+double p_lm(int l, int m, double x);
+double ytheta_lm(int l, int m, double x);
+
+void makegrid3d(grid3d *x_zijk);
+void boundtogrid(scalar2d *b_zjk, grid3d *points, double (*bound)(int, double, double));
+void ftogrid(scalar3d *f_zijk, scalar2d *b_zjk, grid3d *points, double (*func)(int, double, double, double));
+/*void decompose_bound(bound_coeff *b_zlm, scalar2d *b_zjk);*/
+void decompose(coeff *c_znlm, scalar3d *f_zijk);
+
+/* solve radial part of Poisson equation */
+void solve_poisson(coeff *f_znlm, coeff *s_znlm, bound_coeff *b_zlm);
+
+void solve_kernel_even(int L, double alpha, gsl_vector *s_even, gsl_vector *f_even);
+void solve_kernel_odd(int L, double alpha, gsl_vector *s_odd, gsl_vector *f_odd);
+void solve_shell(int L, double alpha, double beta, gsl_vector *s_old, gsl_vector *f);
+void solve_ext(int L, double alpha, gsl_vector *s_old, gsl_vector *f);
+
+void solve_continuity(int L, 
+					  gsl_vector *boundary, 
+					  gsl_matrix *particular_m, 
+					  gsl_vector *homo_coeff);
+
+/* void chebfit(double a, double b, gsl_vector *c, double (*func)(double)); */
+/* void chebfit_even(double a, gsl_vector *c, double (*func)(double)); */
+/* void chebfit_odd(double a, gsl_vector *c, double (*func)(double)); */
+
+/* double chebeval(double a, double b, gsl_vector *c, double x); */
+/* double chebeval_even(double a, gsl_vector *c, double x); */
+/* double chebeval_odd(double a, gsl_vector *c, double x); */
+
+double homogeneous(int L, double a, double b, double x);
+
+void solve_radial(int L, 
+				  gsl_matrix *fieldlm_zn, 
+				  gsl_matrix *sourcelm_zn, 
+				  gsl_vector *boundlm_z); 
+
+void chebfit_homo_kernel_even(gsl_vector *homo_v, int L, double a, double alpha);
+void chebfit_homo_kernel_odd(gsl_vector *homo_v, int L, double a, double alpha);
+void chebfit_homo_shell(gsl_vector *homo_v, int L, double a, double b, double alpha, double beta);
+void chebfit_homo_ext(gsl_vector *homo_v, int L, double b, double alpha);

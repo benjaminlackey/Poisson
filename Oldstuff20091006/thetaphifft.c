@@ -1,0 +1,262 @@
+/* To compile type: gcc -lm -lfftw3 -lgsl -lgslcblas thetaphifft.c print.c coefficients.c poisson.h/*
+
+
+/* c headers */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+/* fftw header */
+#include <fftw3.h>
+
+#include "poisson.h"
+
+#define PI 3.141592653589793
+
+#define delta(i, j) ((i)==(j) ? 1 : 0) /* \delta_{ij} */
+#define neg1toi(i) ((i)%2 ? -1 : 1) /* (-1)^i */
+/* #define iseven(i) ((i)%2 ? 0 : 1) /\* 0 if i is odd. 1 if i is even *\/ */
+/* #define isodd(i) ((i)%2 ? 1 : 0) /\* 1 if i is odd. 0 if i is even *\/ */
+
+double boundary2(int nt, int np, double theta, double phi);
+void decompose_bound(bound_coeff *bcoeff_zjk, scalar2d *b_zjk);
+
+int main (void)
+{
+  int z, j, k;
+  double theta_j, phi_k;
+  int nz = 2;
+  int nt = 11;
+  int np = 10; /* must be even */
+  int npc;
+  scalar2d *b_zjk;
+  bound_coeff *bcoeff_zjk;
+
+  b_zjk = scalar2d_alloc(nz, nt, np);
+  bcoeff_zjk = bound_coeff_alloc(nz, nt, np);
+
+  npc = ( np / 2 ) + 1;
+  
+  /* Assign the data. */
+  for ( z = 0; z < nz; z++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  phi_k = 2*PI*k/np;
+	  for ( j = 0; j < nt; j++ ) {
+		theta_j = PI*j/(nt-1);
+		/*printf("(%d, %d, %d, %f) ", z, j, k, boundary2(nt, np, theta_j, phi_k));*/
+		scalar2d_set(b_zjk, z, j, k, boundary2(nt, np, theta_j, phi_k));
+	  }
+	} 
+  }
+	
+  /* print start data */
+  print_scalar2d(b_zjk);
+  /* for ( j = 0; j < nt; j++ ) { */
+  /* 	for ( k = 0; k < np; k++ ) { */
+  /* 	  printf ( "%f  ", in[k*nt+j]); */
+  /* 	} */
+  /* 	printf ( "\n" );	    */
+  /*   }  */
+  /*   printf ( "\n" ); */
+  
+  decompose_bound(bcoeff_zjk, b_zjk);
+
+  print_bound_coeff(bcoeff_zjk);
+  
+  return 0;
+
+}
+
+
+double boundary2(int nt, int np, double theta, double phi)
+{
+  int j, k;
+  double sum;
+
+  sum = 0;
+  k=0;
+  for ( j = 0; j < nt; j++ ) {
+	sum += cos(j*theta);
+	for ( k = 2; k < np/2+1; k+=2 ) {
+	  sum += cos(j*theta)*(cos(k*phi) + sin(k*phi));
+	}
+	for ( k = 1; k < np/2+1; k+=2 ) {
+	  sum += sin(j*theta)*(cos(k*phi) + sin(k*phi));
+	} 
+  }
+  return sum;
+}
+
+
+void decompose_bound(bound_coeff *bcoeff_zjk, scalar2d *b_zjk)
+{
+  int nz; /* number of zones */
+  int nt; /* number of points in theta direction */
+  int np; /* number of points in phi direction. must be even. */
+  int npc; /* number of complex numbers in phi direction */
+  int z; /* current boundary of zone */
+  int j, k;
+  double *in2d; /* 2d array to store grid for theta and phi */
+  double *in1dphi; /* picks out varying phi for fixed theta */
+  double *in1dcos; /* picks out varying even theta for fixed phi */
+  double *in1dsin; /* picks out varying even theta for fixed phi */
+  fftw_plan plan_forward;
+  fftw_complex *out1dphic; /* fft in phi direction for fixed theta */
+  double *out1dcos; /* fct in theta direction for fixed phi (k is even) */
+  double *out1dsin; /* fst in theta direction for fixed phi (k is odd) */
+  fftw_complex *out2dc; /* final 2d fft */
+  
+  nz = b_zjk->nz;
+  nt = b_zjk->nt;
+  np = b_zjk->np;
+
+  if(np%2 == 1)
+	printf("np must be even\n");
+  
+  npc = ( np / 2 ) + 1; /* the first and last numbers are real (np re+im values) */
+  
+  /* Set up arrays to hold the data */
+  in2d = fftw_malloc ( sizeof ( double ) * nt * np );
+  in1dphi = fftw_malloc ( sizeof ( double ) * np );
+  in1dcos = fftw_malloc ( sizeof ( double ) * nt );
+  in1dsin = fftw_malloc ( sizeof ( double ) * (nt-2) );
+  out1dphic = fftw_malloc ( sizeof ( fftw_complex ) * npc );
+  out1dcos = fftw_malloc ( sizeof ( double ) * nt );
+  out1dsin = fftw_malloc ( sizeof ( double ) * (nt-2) );
+  out2dc = fftw_malloc ( sizeof ( fftw_complex ) * nt * npc ); 
+
+  for (z=0; z<nz; z++) {
+
+	
+	/* Assign the data. */
+	for ( k = 0; k < np; k++ )
+	  for ( j = 0; j < nt; j++ )
+		in2d[k*nt+j] = scalar2d_get(b_zjk, z, j, k);
+	
+	/*   /\* print start data *\/ */
+	/*   for ( j = 0; j < nt; j++ ) { */
+	/* 	for ( k = 0; k < np; k++ ) { */
+	/* 	  printf ( "%f  ", in[k*nt+j]); */
+	/* 	} */
+	/* 	printf ( "\n" );	    */
+	/*   }  */
+	/*   printf ( "\n" ); */
+	
+	/* transform for phi for fixed theta value (fixed j) */
+	for ( j = 0; j < nt; j++ ) {
+	  for ( k = 0; k < np; k++ ) {
+		in1dphi[k] = in2d[k*nt+j];
+	  }
+	  plan_forward = fftw_plan_dft_r2c_1d ( np, in1dphi, out1dphic, FFTW_ESTIMATE );
+	  fftw_execute ( plan_forward );
+	  for ( k = 0; k < npc; k++ ) {
+		out2dc[k*nt+j][0] = out1dphic[k][0]*(2-delta(k, 0)-delta(k, np/2))/np; 
+		out2dc[k*nt+j][1] = out1dphic[k][1]*(-1)*(2-delta(k, 0)-delta(k, np/2))/np;
+	  }
+	} 
+	
+	/* cosine transform for real part of even k. */
+	for ( k = 0; k < npc; k += 2 ) {
+	  /*printf( "k = %d:\t", k);*/
+	  for ( j = 0; j < nt; j++ ) {
+		in1dcos[j] = out2dc[k*nt+j][0];
+	  }
+	  plan_forward = fftw_plan_r2r_1d ( nt, in1dcos, out1dcos, FFTW_REDFT00, FFTW_ESTIMATE );
+	  fftw_execute ( plan_forward );
+	  for ( j = 0; j < nt; j++ ) {
+		out2dc[k*nt+j][0] = out1dcos[j]*(2-delta(j, 0)-delta(j, nt-1))/(2*(nt-1));
+		/*printf ( "%f  ", out2dc[k*nt+j][0]);*/
+	  }
+	  /*printf( "\n" );*/
+	} 
+	/*printf ( "\n" );*/
+	
+	/* cosine transform for immaginary part of even k. */
+	for ( k = 2; k < npc-1; k += 2 ) { /* k = 0 and k = npc-1 don't have immaginary parts */
+	  /*printf( "k = %d:\t", k);*/
+	  for ( j = 0; j < nt; j++ ) {
+		in1dcos[j] = out2dc[k*nt+j][1];
+	  }
+	  plan_forward = fftw_plan_r2r_1d ( nt, in1dcos, out1dcos, FFTW_REDFT00, FFTW_ESTIMATE );
+	  fftw_execute ( plan_forward );
+	  for ( j = 0; j < nt; j++ ) {
+		out2dc[k*nt+j][1] = out1dcos[j]*(2-delta(j, 0)-delta(j, nt-1))/(2*(nt-1));
+		/*printf ( "%f  ", out2dc[k*nt+j][1]);*/
+	  }
+	  /*printf( "\n" );*/
+	} 
+	/*printf ( "\n" );*/
+	
+	/* sine transform for real part of odd k. */
+	for ( k = 1; k < npc; k += 2 ) {
+	  /*printf( "k = %d:\t", k);*/
+	  for ( j = 1; j <= nt-2; j++ ) {
+		in1dsin[j-1] = out2dc[k*nt+j][0];
+	  }
+	  plan_forward = fftw_plan_r2r_1d ( nt-2, in1dsin, out1dsin, FFTW_RODFT00, FFTW_ESTIMATE );
+	  fftw_execute ( plan_forward );
+	  out2dc[k*nt][0] = 0.0; /* first element is 0 and not included in RODFT00 */
+	  /*printf ( "%f  ", out2dc[k*nt+j][0]);*/
+	  for ( j = 1; j <= nt-2; j++ ) {
+		out2dc[k*nt+j][0] = out1dsin[j-1]*2/(2*((nt-2)+1)); 
+		/*printf ( "%f  ", out2dc[k*nt+j][0]);*/
+	  }
+	  out2dc[k*nt+nt-1][0] = 0.0; /* last element is 0 and not included in RODFT00 */
+	  /*printf ( "%f  ", out2dc[k*nt+nt-1][0]);*/
+	  /*printf( "\n" );*/
+	} 
+	/*printf( "\n" );*/
+	
+	/* sine transform for immaginary part of odd k. */
+	for ( k = 1; k < npc-1; k += 2 ) { /* k = npc-1 doesn't have immaginary part */
+	  /*printf( "k = %d:\t", k);*/
+	  for ( j = 1; j <= nt-2; j++ ) {
+		in1dsin[j-1] = out2dc[k*nt+j][1];
+		/*printf ( "%f  ", in1dsin[j-1]);*/
+	  }
+	  plan_forward = fftw_plan_r2r_1d ( nt-2, in1dsin, out1dsin, FFTW_RODFT00, FFTW_ESTIMATE );
+	  fftw_execute ( plan_forward );
+	  out2dc[k*nt][1] = 0.0; 
+	  /*printf ( "%f  ", out2dc[k*nt+j][1]);*/
+	  for ( j = 1; j <= nt-2; j++ ) {
+		out2dc[k*nt+j][1] = out1dsin[j-1]*2/(2*((nt-2)+1)); 
+		/*printf ( "%f  ", out2dc[k*nt+j][1]);*/
+	  }
+	  out2dc[k*nt+nt-1][1] = 0.0; 
+	  /*printf ( "%f  ", out2dc[k*nt+nt-1][1]);*/
+	  /*printf( "\n" );*/
+	} 
+	/*printf( "\n" );*/
+	
+	
+/* 	  /\* print output *\/ */
+/* 	  for ( j = 0; j < nt; j++ ) { */
+/* 		for ( k = 0; k < npc; k++ ) { */
+/* 		  printf ( "(%f, %f)  ", out2dc[k*nt+j][0], out2dc[k*nt+j][1] ); */
+/* 		} */
+/* 		printf ( "\n" ); */
+/* 	  } */
+/* 	  printf ( "\n" ); */
+	
+	/* send coefficients to bound_coeff structure */
+	for ( k = 0; k < npc; k++ ) {
+	  for ( j = 0; j < nt; j++ ) {
+		bound_coeff_set(bcoeff_zjk, z, j, k, 0, out2dc[k*nt+j][0]);
+		bound_coeff_set(bcoeff_zjk, z, j, k, 1, out2dc[k*nt+j][1]);
+	  }
+	}
+	
+	
+  }
+  
+  /* Delete plan and arrays */
+  fftw_destroy_plan ( plan_forward );
+  fftw_free ( in2d );
+  fftw_free ( in1dphi );
+  fftw_free ( out1dphic );
+  fftw_free ( out2dc );
+  fftw_free ( in1dcos );
+  fftw_free ( in1dsin );
+  fftw_free ( out1dcos );
+  fftw_free ( out1dsin );
+}

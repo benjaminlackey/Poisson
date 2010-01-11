@@ -1,0 +1,112 @@
+/* To compile type: gcc -lm -lfftw3 -lgsl -lgslcblas setgettest.c print.c coefficients.c poisson.h/*
+
+
+/* c headers */
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+/* fftw header */
+#include <fftw3.h>
+
+#include "poisson.h"
+
+#define PI 3.141592653589793
+
+#define delta(i, j) ((i)==(j) ? 1 : 0) /* \delta_{ij} */
+#define neg1toi(i) ((i)%2 ? -1 : 1) /* (-1)^i */
+/* #define iseven(i) ((i)%2 ? 0 : 1) /\* 0 if i is odd. 1 if i is even *\/ */
+/* #define isodd(i) ((i)%2 ? 1 : 0) /\* 1 if i is odd. 0 if i is even *\/ */
+
+double boundary(int nt, int np, double theta, double phi);
+void gridtofourier_bound(bound_coeff *bcoeff_zjk, scalar2d *b_zjk);
+void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff);
+void gridtofourier(coeff *coeff, scalar3d *c_zijk);
+double field(int nr, int nt, int np, double xi, double theta, double phi);
+double T_n(int n, double x);
+
+int main (void)
+{
+  int z, i, j, k;
+  double xi_i, theta_j, phi_k;
+  int nz = 2;
+  int nr = 7; /* must be even? */
+  int nt = 3;
+  int np = 2; /* must be even */
+  int npc;
+  scalar2d *b_zjk;
+  bound_coeff *bcoeff_zjk;
+  scalar3d *c_zijk;
+  coeff *coeff_zijk;
+
+  b_zjk = scalar2d_alloc(nz-1, nt, np);
+  bcoeff_zjk = bound_coeff_alloc(nz-1, nt, np);
+
+  c_zijk = scalar3d_alloc(nz, nr, nt, np);
+  coeff_zijk = coeff_alloc(nz, nr, nt, np);
+
+  npc = ( np / 2 ) + 1;
+  
+  /* Assign the data. */
+/*   for ( z = 0; z < nz; z++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  for ( j = 0; j < nt; j++ ) { */
+/* 		theta_j = PI*j/(nt-1); */
+/* 		scalar2d_set(b_zjk, z, j, k, boundary2(nt, np, theta_j, phi_k)); */
+/* 	  } */
+/* 	} */
+/*   } */
+  
+  /* Assign the boundary data version 2. */
+  for ( z = 0; z < nz-1; z++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  scalar2d_set(b_zjk, z, 0, k, (z+1)*100);
+	  for ( j = 1; j < nt-1; j++ ) {
+		scalar2d_set(b_zjk, z, j, k, (z+1)*100 + (j+1)*10 + (k+1));
+	  }
+	  scalar2d_set(b_zjk, z, nt-1, k, (z+1)*100);
+	}
+  }
+  
+  /* Assign the field data. */
+  for ( z = 0; z < nz; z++ ) {
+	for ( i = 0; i < nr; i++ ) {
+	  for ( j = 0; j < nt; j++ ) {
+		for ( k = 0; k < np; k++ ) {
+		  if(z==0) {
+			xi_i = sin(PI*i/(2*(nr-1)));
+		  } else {
+			xi_i = -cos(PI*i/(nr-1));
+		  }
+		  theta_j = PI*j/(nt-1); 
+		  phi_k = 2*PI*k/np;
+		  scalar3d_set(c_zijk, z, i, j, k, field(nr, nt, np, xi_i, theta_j, phi_k));
+		}
+	  }
+	}
+  }
+  
+  /* print start data */
+ /*  printf("  Boundary data.\n"); */
+  
+/*   print_scalar2d(b_zjk); */
+  
+/*   gridtofourier_bound(bcoeff_zjk, b_zjk); */
+  
+/*   print_bound_coeff(bcoeff_zjk); */
+  
+/*   fouriertogrid_bound(b_zjk, bcoeff_zjk); */
+
+/*   print_scalar2d(b_zjk); */
+
+  printf("  Field data.\n");
+
+  print_scalar3d(c_zijk);
+
+  gridtofourier(coeff_zijk, c_zijk);
+
+  print_coeff_2(coeff_zijk);
+
+  return 0;
+}
