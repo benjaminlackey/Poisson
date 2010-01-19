@@ -48,7 +48,8 @@ int main (void)
 	    coeff_set(f_coeff, z, i, j, k, imag, 1.0);
 	  }
 	}
-	/* fill up sin(theta) coefficients (currently using */
+	/* fill up cos(theta) coefficients*/ 
+	/* (currently using coefficients of P^6_2(cos(theta)) + P^5_4(cos(theta))) */
 	for ( k = 0; k < npc; k+=2 ) {
 	  coeff_set(f_coeff, z, i, 0, k, imag, 10.0*105.0/256.0);
 	  coeff_set(f_coeff, z, i, 1, k, imag, 288.0*105.0/256.0);
@@ -65,7 +66,7 @@ int main (void)
   print_coeff(f_coeff);
   
   dividebysin(fbysin_coeff, f_coeff);
-  print_coeff(fbysin_coeff);
+  /*print_coeff(fbysin_coeff);*/
 
 
   /*>>>>>>>>>>> now do the same thing for the boundary coefficients <<<<<<<<<<<<<*/

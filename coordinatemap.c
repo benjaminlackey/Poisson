@@ -15,19 +15,74 @@
 #include "poisson.h"
 
 
+/***********************************/
+/* copy from source to destination */
+/***********************************/
+void scalar2d_memcpy(scalar2d *dest, scalar2d *source)
+{
+  int i;
+  int nz, nt, np;
+
+  nz = source->nz;
+  nt = source->nt;
+  np = source->np;
+
+  for(i=0; i<nz*nt*np; i++)
+    dest->data[i] = source->data[i];
+}
+
+void scalar3d_memcpy(scalar3d *dest, scalar3d *source)
+{
+  int i;
+  int nz, nr, nt, np;
+
+  nz = source->nz;  
+  nr = source->nr;
+  nt = source->nt;
+  np = source->np;
+
+  for(i=0; i<nz*nr*nt*np; i++)
+    dest->data[i] = source->data[i];
+}
+
+void coeff_memcpy(coeff *dest, coeff *source)
+{
+  int i;
+  int nz, nr, nt, np, npc;
+
+  nz = source->nz;  
+  nr = source->nr;
+  nt = source->nt;
+  np = source->np;
+
+  npc = np/2 + 1;
+
+  for(i=0; i<nz*nr*nt*2*npc; i++)
+    dest->data[i] = source->data[i];
+}
+
+void bound_coeff_memcpy(bound_coeff *dest, bound_coeff *source)
+{
+  int i;
+  int nz, nt, np, npc;
+
+  nz = source->nz;  
+  nt = source->nt;
+  np = source->np;
+
+  npc = np/2 + 1;
+
+  for(i=0; i<nz*nt*2*npc; i++)
+    dest->data[i] = source->data[i];
+}
+  
 /*********************************/
 /* Add a constant to a function. */
 /*********************************/
 void scalar3d_addconstant(scalar3d *in_grid, double number, scalar3d *sum_grid)
 {
-  int z;
-  int i;
-  int j;
-  int k;
-  int nz;
-  int nr;
-  int nt;
-  int np;
+  int z, i, j, k;
+  int nz, nr, nt, np;
 
   nz = sum_grid->nz;
   nr = sum_grid->nr;
@@ -52,14 +107,8 @@ void scalar3d_addconstant(scalar3d *in_grid, double number, scalar3d *sum_grid)
 /****************************************/
 void scalar3d_add(scalar3d *in1_grid, scalar3d *in2_grid, scalar3d *sum_grid)
 {
-  int z;
-  int i;
-  int j;
-  int k;
-  int nz;
-  int nr;
-  int nt;
-  int np;
+  int z, i, j, k;
+  int nz, nr, nt, np;
 
   nz = sum_grid->nz;
   nr = sum_grid->nr;
@@ -84,14 +133,8 @@ void scalar3d_add(scalar3d *in1_grid, scalar3d *in2_grid, scalar3d *sum_grid)
 /**********************************************/
 void scalar3d_multiply(scalar3d *in1_grid, scalar3d *in2_grid, scalar3d *product_grid)
 {
-  int z;
-  int i;
-  int j;
-  int k;
-  int nz;
-  int nr;
-  int nt;
-  int np;
+  int z, i, j, k;
+  int nz, nr, nt, np;
 
   nz = product_grid->nz;
   nr = product_grid->nr;
@@ -505,6 +548,31 @@ void rofxtp(scalar3d *rgrid, gsl_vector *alphalist, gsl_vector *betalist, scalar
 
 
 /******************************************************************************************************/
+/* Take a function for the boundary b = b(z, theta, phi) and evaluate it on the boundary grid points. */
+/******************************************************************************************************/ 
+void boundarytogrid(scalar2d *boundary_scalar2d, double (*boundary)(int z, double theta, double phi))
+{
+  int z, j, k;
+  int nz, nt, np;
+  double theta_j, phi_k;
+  
+  nz = boundary_scalar2d->nz + 1;
+  nt = boundary_scalar2d->nt;
+  np = boundary_scalar2d->np;
+  
+  for ( z = 0; z < nz-1; z++ ) {
+    for ( k = 0; k < np; k++ ) {
+      phi_k = 2*PI*k/np;
+      for ( j = 0; j < nt; j++ ) {
+	theta_j = PI*j/(nt-1);
+	scalar2d_set(boundary_scalar2d, z, j, k, boundary(z, theta_j, phi_k));
+      }
+    }
+  }
+}
+
+
+/******************************************************************************************************/
 /* Take a function f = f(z, r, theta, phi) and evaluate it on the surface matched grid func_scalar3d. */
 /******************************************************************************************************/ 
 void functiontogrid(scalar3d *func_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi))
@@ -569,6 +637,33 @@ void functiontogrid(scalar3d *func_scalar3d, gsl_vector *alpha_vector, gsl_vecto
 }
 
 
+/***************************************************************************************/
+/* Take a function f = f(z, xi, theta, phi) and evaluate it on the grid func_scalar3d. */
+/***************************************************************************************/ 
+void functiontogrid_xi(scalar3d *func_scalar3d, double (*func)(int z, double xi, double theta, double phi))
+{
+  int z, i, j, k;
+  int nz, nr, nt, np;
+  double xi_i, theta_j, phi_k;
+  
+  nz = func_scalar3d->nz;
+  nr = func_scalar3d->nr;
+  nt = func_scalar3d->nt;
+  np = func_scalar3d->np;
+  
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  xi_i = ((z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)));
+	  theta_j = PI*j/(nt-1);
+	  phi_k = 2*PI*k/np;
+	  scalar3d_set(func_scalar3d, z, i, j, k, func(z, xi_i, theta_j, phi_k));
+	}
+      }
+    }
+  }
+}
 
 /* /\*************************************************************\/ */
 /* /\* Use recursion relations to divide f in kernel by xi.      *\/ */
@@ -1250,12 +1345,12 @@ void dfdthetaprime(coeff *dfdt_coeff, coeff *f_coeff)
 }
 
 
-/***************************************************/
-/* Take f and divide it by sin(theta):             */
-/*           1/sin(theta) * f                      */
-/* This currently does not allow for theta         */
-/* basis functions to be switched (thetashift=0).  */
-/***************************************************/
+/*******************************************************************************************/
+/* Take f and divide it by sin(theta):                                                     */
+/*           1/sin(theta) * f                                                              */
+/* This does not allow for the input f to have switched basis functions (thetashift != 0). */
+/* This never happens in Jacobian, gradient, or Laplacian so it doesn't matter             */
+/*******************************************************************************************/
 void dividebysin(coeff *fbysin_coeff, coeff *f_coeff)
 {
   int imag;
@@ -1330,12 +1425,12 @@ void dividebysin(coeff *fbysin_coeff, coeff *f_coeff)
 }
 
 
-/***************************************************/
-/* Take f and divide it by sin(theta):             */
-/*           1/sin(theta) * f                      */
-/* This currently does not allow for theta         */
-/* basis functions to be switched (thetashift=0).  */
-/***************************************************/
+/*******************************************************************************************/
+/* Take f and divide it by sin(theta):                                                     */
+/*           1/sin(theta) * f                                                              */
+/* This does not allow for the input f to have switched basis functions (thetashift != 0). */
+/* This never happens in the Jacobian, gradient, or Laplacian so it doesn't matter.        */
+/*******************************************************************************************/
 void dividebysin_bound(bound_coeff *fbysin_bound_coeff, bound_coeff *f_bound_coeff)
 {
   int imag;
@@ -1703,12 +1798,13 @@ void dfdphiprime(coeff *dfdp_coeff, coeff *f_coeff)
   for(z=0; z<nz; z++) {
     for(i=0; i<nr; i++) { 
       for(j=0; j<nt; j++) {
-	for(k=0; k<npc-1; k++) { /* treat k=npc-1 separately */
+	for(k=0; k<npc-1; k++) {
 	  dcoskpdp = -k * coeff_get(f_coeff, z, i, j, k, REAL);
 	  dsinkpdp = k * coeff_get(f_coeff, z, i, j, k, IMAG);
 	  coeff_set(dfdp_coeff, z, i, j, k, REAL, dsinkpdp);
 	  coeff_set(dfdp_coeff, z, i, j, k, IMAG, dcoskpdp);
 	}
+	/* treat k=npc-1 separately */
 	coeff_set(dfdp_coeff, z, i, j, npc-1, REAL, 0.0);
 	coeff_set(dfdp_coeff, z, i, j, npc-1, IMAG, 0.0);
       }
@@ -1821,13 +1917,8 @@ void laplace_ang(coeff *lapf_coeff, coeff *f_coeff)
 /**********************************************************************/
 /* Take grid points for each boundary b_zjk and decompose             */
 /* them into coefficients of {cos(j theta), sin(j theta)}e^(i k phi). */
-/*                                                                    */
-/* WARNING: THE GRID POINTS CORRESPONDING TO THETA = 0 OR PI MUST BE  */
-/*          THE SAME FOR ALL PHI.  OTHERWISE THE GRID IS MULTIVALUED  */
-/*          AT THE POLES.  THE INVERSE TRANSFORM WILL NOT RETURN THE  */
-/*          ORIGINAL DATA IF THIS CONDITION IS NOT MET.               */
 /**********************************************************************/
-void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_zjk)
+void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_scalar2d)
 {
   int nz; /* number of zones */
   int nt; /* number of points in theta direction */
@@ -1836,6 +1927,7 @@ void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_zjk)
   int z; /* current boundary of zone */
   int j, k;
   int imag;
+  scalar2d *b_zjk;
   double *in1dphi; /* picks out varying phi for fixed theta */
   double *in1dcos; /* picks out varying even theta for fixed phi */
   double *in1dsin; /* picks out varying even theta for fixed phi */
@@ -1846,15 +1938,19 @@ void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_zjk)
   double *out1dcos; /* fct in theta direction for fixed phi (k is even) */
   double *out1dsin; /* fst in theta direction for fixed phi (k is odd) */
   
-  nz = b_zjk->nz;
-  nt = b_zjk->nt;
-  np = b_zjk->np;
+  nz = b_scalar2d->nz;
+  nt = b_scalar2d->nt;
+  np = b_scalar2d->np;
   
-  if(np%2 == 1)
+  if(np%2 == 1) 
 	printf("np must be even in gridtofourier_bound\n");
   
   npc = ( np / 2 ) + 1; /* the first and last numbers are real (np re+im values) */
   
+  /* copy data to new structure so original data is not erased */
+  b_zjk = scalar2d_alloc(nz, nt, np);
+  scalar2d_memcpy(b_zjk, b_scalar2d);
+
   /* Set up arrays to hold the data */
   in1dphi = fftw_malloc ( sizeof ( double ) * np );
   in1dcos = fftw_malloc ( sizeof ( double ) * nt );
@@ -1924,6 +2020,7 @@ void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_zjk)
   } /* end of z loop */
   
   /* Delete plan and arrays */
+  scalar2d_free(b_zjk);
   fftw_destroy_plan ( plan_forward_phi );
   fftw_destroy_plan ( plan_forward_cos );
   fftw_destroy_plan ( plan_forward_sin );
@@ -1940,7 +2037,7 @@ void gridtofourier_bound(bound_coeff *bcoeff, scalar2d *b_zjk)
 /* Take coefficients of {cos(j theta), sin(j theta)}e^(i k phi)              */
 /* and return radial distance to boundary for each (theta, phi).            */
 /****************************************************************************/
-void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff, int thetashift)
+void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *b_bound_coeff, int thetashift)
 {
   int nz; /* number of zones */
   int nt; /* number of points in theta direction */
@@ -1950,6 +2047,7 @@ void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff, int thetashift)
   int j, k;
   int imag;
   int kstart;
+  bound_coeff *bcoeff;
   fftw_complex *in1dphic; /* picks out varying phi for fixed theta */
   double *in1dcos; /* picks out varying even theta for fixed phi */
   double *in1dsin; /* picks out varying even theta for fixed phi */
@@ -1960,15 +2058,19 @@ void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff, int thetashift)
   double *out1dcos; /* fct in theta direction for fixed phi (k is even) */
   double *out1dsin; /* fst in theta direction for fixed phi (k is odd) */
   
-  nz = b_zjk->nz;
-  nt = b_zjk->nt;
-  np = b_zjk->np;
+  nz = b_bound_coeff->nz;
+  nt = b_bound_coeff->nt;
+  np = b_bound_coeff->np;
   
   if(np%2 == 1)
     printf("np must be even in fouriertogrid_bound\n");
   
   npc = ( np / 2 ) + 1; /* the first and last numbers are real (np re+im values) */
   
+  /* copy data to new structure so original data is not erased */
+  bcoeff = bound_coeff_alloc(nz, nt, np);
+  bound_coeff_memcpy(bcoeff, b_bound_coeff);
+
   /* Set up arrays to hold the data */
   in1dcos = fftw_malloc ( sizeof ( double ) * nt );
   in1dsin = fftw_malloc ( sizeof ( double ) * (nt-2) ); 
@@ -2052,6 +2154,7 @@ void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff, int thetashift)
   } /* end of z loop */
   
   /* Delete plan and arrays */
+  bound_coeff_free(bcoeff);
   fftw_destroy_plan ( plan_backward_cos );
   fftw_destroy_plan ( plan_backward_sin );
   fftw_destroy_plan ( plan_backward_phi );
@@ -2067,13 +2170,8 @@ void fouriertogrid_bound(scalar2d *b_zjk, bound_coeff *bcoeff, int thetashift)
 /**********************************************************************/
 /* Take grid points c_zijk for each zone and decompose them into      */
 /* coefficients of T_i(xi){cos(j theta), sin(j theta)}e^(i k phi).    */
-/*                                                                    */
-/* WARNING: THE GRID POINTS CORRESPONDING TO THETA = 0 OR PI MUST BE  */
-/*          THE SAME FOR ALL PHI.  OTHERWISE THE GRID IS MULTIVALUED  */
-/*          AT THE POLES.  THE INVERSE TRANSFORM WILL NOT RETURN THE  */
-/*          ORIGINAL DATA IF THIS CONDITION IS NOT MET.               */
 /**********************************************************************/
-void gridtofourier(coeff *coeff, scalar3d *c_zijk, int xishift, int thetashift)
+void gridtofourier(coeff *coeff, scalar3d *c_scalar3d, int xishift, int thetashift)
 {
   int nz; /* number of zones */
   int nr; /* number of points in radial direction */
@@ -2083,6 +2181,7 @@ void gridtofourier(coeff *coeff, scalar3d *c_zijk, int xishift, int thetashift)
   int z; /* current boundary of zone */
   int i, j, k;
   int imag;
+  scalar3d *c_zijk;
   double *in1dphi; /* picks out varying phi for fixed theta */
   double *in1dcos; /* picks out varying even theta for fixed phi */
   double *in1dsin; /* picks out varying even theta for fixed phi */
@@ -2099,16 +2198,20 @@ void gridtofourier(coeff *coeff, scalar3d *c_zijk, int xishift, int thetashift)
   double *out1dxi;
   double *out1dxiodd;
   
-  nz = c_zijk->nz;
-  nr = c_zijk->nr;
-  nt = c_zijk->nt;
-  np = c_zijk->np;
+  nz = c_scalar3d->nz;
+  nr = c_scalar3d->nr;
+  nt = c_scalar3d->nt;
+  np = c_scalar3d->np;
   
   if(np%2 == 1)
 	printf("np must be even in gridtofourier\n");
   
   npc = ( np / 2 ) + 1; /* the first and last numbers are real (np re+im values) */
   
+  /* copy data to new structure so original data is not erased */
+  c_zijk = scalar3d_alloc(nz, nr, nt, np);
+  scalar3d_memcpy(c_zijk, c_scalar3d);
+
   /* Set up arrays to hold the data */
   in1dphi = fftw_malloc ( sizeof ( double ) * np );
   in1dcos = fftw_malloc ( sizeof ( double ) * nt );
@@ -2252,6 +2355,7 @@ void gridtofourier(coeff *coeff, scalar3d *c_zijk, int xishift, int thetashift)
   } /* end of z loop */
   
   /* Delete plan and arrays */
+  scalar3d_free(c_zijk);
   fftw_destroy_plan ( plan_forward_phi );
   fftw_destroy_plan ( plan_forward_cos );
   fftw_destroy_plan ( plan_forward_sin );
@@ -2273,7 +2377,7 @@ void gridtofourier(coeff *coeff, scalar3d *c_zijk, int xishift, int thetashift)
 /* Take coefficients of T_i(xi){cos(j theta), sin(j theta)}e^(i k phi)      */
 /* and evaluate their values on a grid (xi_i, theta_j, phi_k).              */
 /****************************************************************************/
-void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
+void fouriertogrid(scalar3d *c_zijk, coeff *c_coeff, int xishift, int thetashift)
 {
   int nz; /* number of zones */
   int nr; /* number of points in radial direction */
@@ -2284,6 +2388,7 @@ void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
   int imag;
   int i, j, k;
   int kstart;
+  coeff *coeff;
   fftw_complex *in1dphic; /* picks out varying phi for fixed theta */
   double *in1dcos; /* picks out varying even theta for fixed phi */
   double *in1dsin; /* picks out varying odd theta for fixed phi */
@@ -2300,16 +2405,20 @@ void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
   double *out1dxi;
   double *out1dxiodd;
   
-  nz = c_zijk->nz;
-  nr = c_zijk->nr;
-  nt = c_zijk->nt;
-  np = c_zijk->np;
+  nz = c_coeff->nz;
+  nr = c_coeff->nr;
+  nt = c_coeff->nt;
+  np = c_coeff->np;
   
   if(np%2 == 1)
 	printf("np must be even in gridtofourier\n");
   
   npc = ( np / 2 ) + 1; /* the first and last numbers are real (np re+im values) */
   
+  /* copy data to new structure so original data is not erased */
+  coeff = coeff_alloc(nz, nr, nt, np);
+  coeff_memcpy(coeff, c_coeff);
+
   /* Allocate memory for 1 dimensional transform arrays. */
   in1dphic = fftw_malloc ( sizeof ( fftw_complex ) * npc );
   in1dcos = fftw_malloc ( sizeof ( double ) * nt );
@@ -2395,7 +2504,7 @@ void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
       }
       
     } 
-    
+    print_coeff(coeff); 
     /*>>>>>>>>>>>>>>>>>>>>>> INVERSE THETA TRANSFORM <<<<<<<<<<<<<<<<<<<<<<<<*/
     
     /* cosine transform */
@@ -2444,7 +2553,8 @@ void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
 	} 
       }
     }  
-    
+   
+
     /*>>>>>>>>>>>>>>>>>>>>>> INVERSE PHI TRANSFORM <<<<<<<<<<<<<<<<<<<<<<<<*/
     
     /* transform for phi for fixed theta value (fixed j) */
@@ -2466,6 +2576,7 @@ void fouriertogrid(scalar3d *c_zijk, coeff *coeff, int xishift, int thetashift)
   } /* end of z loop */
 
   /* Delete plan and arrays */
+  coeff_free(coeff);
   fftw_destroy_plan ( plan_backward_xi );
   fftw_destroy_plan ( plan_backward_xiodd );
   fftw_destroy_plan ( plan_backward_cos );

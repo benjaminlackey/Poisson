@@ -74,7 +74,8 @@ typedef struct
 #define neg1toi(i) ((i)%2 ? -1 : 1) /* (-1)^i */
 #define cosipiby2(i) ((i)%2 ? 0 : ((i)%4==0 ? 1 : -1)) /* \cos(i\pi/2) */
 #define ABS(i) ((i)<0 ? -(i) : (i))
-
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 grid3d *grid3d_alloc(int nz, int nr, int nt, int np);
 void grid3d_set(grid3d *points, int z, int i, int j, int k, double xi, double theta, double phi);
@@ -91,6 +92,7 @@ void scalar3d_multiply(scalar3d *in1_grid, scalar3d *in2_grid, scalar3d *product
 
 
 scalar2d *scalar2d_alloc(int nz, int nt, int np);
+void scalar2d_free(scalar2d *f);
 void scalar2d_set(scalar2d *b_zjk, int z, int j, int k, double x);
 double scalar2d_get(scalar2d *b_zjk, int z, int j, int k);
 
@@ -108,6 +110,7 @@ double coeff_get(coeff *c, int z, int i, int j, int k, int imag);
 
 
 bound_coeff *bound_coeff_alloc(int nz, int nt, int np);
+void bound_coeff_free(bound_coeff *b);
 void bound_coeff_set(bound_coeff *b, int z, int j, int k, int i, double x);
 double bound_coeff_get(bound_coeff *b, int z, int j, int k, int i);
 
@@ -135,6 +138,11 @@ void print_coeff(coeff *c);
 void print_coeff_2(coeff *c);
 void print_bound_coeff(bound_coeff *b);
 
+/* copy data */
+void scalar2d_memcpy(scalar2d *dest, scalar2d *source);
+void scalar3d_memcpy(scalar3d *dest, scalar3d *source);
+void coeff_memcpy(coeff *dest, coeff *source);
+void bound_coeff_memcpy(bound_coeff *dest, bound_coeff *source);
 
 /* functions for mapping spherical coordinates to surface matched coordinates */
 void map_physicaltogrid(scalar2d *b_zjk, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f_grid, scalar2d *g_grid);
@@ -142,7 +150,9 @@ void map_physicaltogrid_kernel(scalar2d *b_zjk, gsl_vector *alphalist, scalar2d 
 void map_physicaltogrid_shell(scalar2d *b_zjk, int z, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *fin_grid, scalar2d *gout_grid);
 void map_physicaltogrid_ext(scalar2d *b_zjk, gsl_vector *alphalist, scalar2d *f_grid);
 void rofxtp(scalar3d *rgrid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
+void boundarytogrid(scalar2d *boundary_scalar2d, double (*boundary)(int z, double theta, double phi));
 void functiontogrid(scalar3d *func_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi));
+void functiontogrid_xi(scalar3d *func_scalar3d, double (*func)(int z, double xi, double theta, double phi));
 
 /* fast transforms between gridpoints and basis function coefficients (for grids and boundaries) */
 void gridtofourier_bound(bound_coeff *bcoeff_zjk, scalar2d *b_zjk);

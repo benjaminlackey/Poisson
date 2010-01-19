@@ -38,7 +38,7 @@ void gradient_r(scalar3d *gradf_r_scalar3d, scalar3d *f_scalar3d, gsl_vector *al
   scalar3d *dfdxi_scalar3d;
   scalar3d *j1_scalar3d;
   scalar3d *roru_scalar3d;
-  double u, dfdxi, j1;
+  double u, dfdxi_double, j1;
   
   nz = f_scalar3d->nz;
   nr = f_scalar3d->nr;
@@ -62,9 +62,9 @@ void gradient_r(scalar3d *gradf_r_scalar3d, scalar3d *f_scalar3d, gsl_vector *al
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
-	  dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	  dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	  j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
-	  scalar3d_set(gradf_r_scalar3d, z, i, j, k, dfdxi/j1);
+	  scalar3d_set(gradf_r_scalar3d, z, i, j, k, dfdxi_double/j1);
 	}
       }
     }
@@ -77,9 +77,9 @@ void gradient_r(scalar3d *gradf_r_scalar3d, scalar3d *f_scalar3d, gsl_vector *al
     for ( j = 0; j < nt; j++ ) {
       for ( k = 0; k < np; k++ ) {
 	u = scalar3d_get(roru_scalar3d, z, i, j, k);
-	dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
-	scalar3d_set(gradf_r_scalar3d, z, i, j, k, -u*u*dfdxi/j1);
+	scalar3d_set(gradf_r_scalar3d, z, i, j, k, -u*u*dfdxi_double/j1);
       }
     }
   }
@@ -108,7 +108,7 @@ void gradient_theta(scalar3d *gradf_theta_scalar3d, scalar3d *f_scalar3d, gsl_ve
   scalar3d *j1_scalar3d;
   scalar3d *j2_scalar3d;
   scalar3d *roru_scalar3d;
-  double u, dfdt_byr, dfdxi, j1, j2;
+  double u, dfdt_byr, dfdxi_double, j1, j2;
   
   nz = f_scalar3d->nz;
   nr = f_scalar3d->nr;
@@ -135,18 +135,20 @@ void gradient_theta(scalar3d *gradf_theta_scalar3d, scalar3d *f_scalar3d, gsl_ve
   
   /* calculate the xi and theta part of the Jacobian */
   jacobian1(j1_scalar3d, alpha_vector, f_scalar2d, g_scalar2d);
+  /*print_scalar3d(j1_scalar3d);*/
   jacobian2(j2_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  
+  /*print_scalar3d(j2_scalar3d);*/
+
   /* set df/dtheta = (1/R)*df/dtheta' - (J_2/J_1)*df/dxi except for external domain */
   for ( z = 0; z < nz-1; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
 	  dfdt_byr = scalar3d_get(dfdt_byr_scalar3d, z, i, j, k);
-	  dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	  dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	  j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
 	  j2 = scalar3d_get(j2_scalar3d, z, i, j, k);
-	  scalar3d_set(gradf_theta_scalar3d, z, i, j, k, dfdt_byr - dfdxi*j2/j1);
+	  scalar3d_set(gradf_theta_scalar3d, z, i, j, k, dfdt_byr - dfdxi_double*j2/j1);
 	}
       }
     }
@@ -160,10 +162,10 @@ void gradient_theta(scalar3d *gradf_theta_scalar3d, scalar3d *f_scalar3d, gsl_ve
       for ( k = 0; k < np; k++ ) {
 	u = scalar3d_get(roru_scalar3d, z, i, j, k);
 	dfdt_byr = scalar3d_get(dfdt_byr_scalar3d, z, i, j, k);
-	dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
 	j2 = scalar3d_get(j2_scalar3d, z, i, j, k);
-	scalar3d_set(gradf_theta_scalar3d, z, i, j, k, u*u*(dfdt_byr - dfdxi*j2/j1));
+	scalar3d_set(gradf_theta_scalar3d, z, i, j, k, u*u*(dfdt_byr - dfdxi_double*j2/j1));
       }
     }
   }
@@ -196,7 +198,7 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
   scalar3d *j1_scalar3d;
   scalar3d *j3_scalar3d;
   scalar3d *roru_scalar3d;
-  double u, dfdp_byrsint, dfdxi, j1, j3;
+  double u, dfdp_byrsint, dfdxi_double, j1, j3;
   
   nz = f_scalar3d->nz;
   nr = f_scalar3d->nr;
@@ -210,7 +212,7 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
   dfdp_bysint_coeff = coeff_alloc(nz, nr, nt, np);
   dfdp_byrsint_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   j1_scalar3d = scalar3d_alloc(nz, nr, nt, np);
-  j2_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  j3_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   roru_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   
   /* calculate df/dxi by going to coefficients then back to gridpoints */
@@ -220,8 +222,8 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
   
   /* calculate 1/(R*sin(theta)) * df/dphi' */
   dfdphiprime(dfdp_coeff, f_coeff);
-  dividebysin(dfdp_bysint_coeff, f_coeff);
-  dividebyr(dfdp_byrsint_scalar3d, dfdp_bysint_coeff, 0, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  dividebysin(dfdp_bysint_coeff, dfdp_coeff);
+  dividebyr(dfdp_byrsint_scalar3d, dfdp_bysint_coeff, 1, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   
   /* calculate the xi and theta part of the Jacobian */
   jacobian1(j1_scalar3d, alpha_vector, f_scalar2d, g_scalar2d);
@@ -232,11 +234,11 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
-	  dfdt_byr = scalar3d_get(dfdt_byr_scalar3d, z, i, j, k);
-	  dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	  dfdp_byrsint = scalar3d_get(dfdp_byrsint_scalar3d, z, i, j, k);
+	  dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	  j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
-	  j2 = scalar3d_get(j2_scalar3d, z, i, j, k);
-	  scalar3d_set(gradf_theta_scalar3d, z, i, j, k, dfdp_byrsint - dfdxi*j3/j1);
+	  j3 = scalar3d_get(j3_scalar3d, z, i, j, k);
+	  scalar3d_set(gradf_phi_scalar3d, z, i, j, k, dfdp_byrsint - dfdxi_double*j3/j1);
 	}
       }
     }
@@ -249,11 +251,11 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
     for ( j = 0; j < nt; j++ ) {
       for ( k = 0; k < np; k++ ) {
 	u = scalar3d_get(roru_scalar3d, z, i, j, k);
-	dfdt_byr = scalar3d_get(dfdt_byr_scalar3d, z, i, j, k);
-	dfdxi = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
+	dfdp_byrsint = scalar3d_get(dfdp_byrsint_scalar3d, z, i, j, k);
+	dfdxi_double = scalar3d_get(dfdxi_scalar3d, z, i, j, k);
 	j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
-	j2 = scalar3d_get(j2_scalar3d, z, i, j, k);
-	scalar3d_set(gradf_theta_scalar3d, z, i, j, k, u*u*(dfdp_byrsint - dfdxi*j3/j1));
+	j3 = scalar3d_get(j3_scalar3d, z, i, j, k);
+	scalar3d_set(gradf_phi_scalar3d, z, i, j, k, u*u*(dfdp_byrsint - dfdxi_double*j3/j1));
       }
     }
   }
@@ -265,6 +267,6 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
   coeff_free(dfdp_bysint_coeff);
   scalar3d_free(dfdp_byrsint_scalar3d);
   scalar3d_free(j1_scalar3d);
-  scalar3d_free(j2_scalar3d);
+  scalar3d_free(j3_scalar3d);
   scalar3d_free(roru_scalar3d);
 }

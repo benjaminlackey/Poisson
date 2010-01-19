@@ -99,6 +99,12 @@ scalar2d *scalar2d_alloc(int nz, int nt, int np)
 }
 
 
+void scalar2d_free(scalar2d *f)
+{
+  free(f->data);
+  free(f);
+}
+
 /**********************************************************************/
 /* Allocate memory to store coefficients in spherical harmonic basis. */
 /**********************************************************************/
@@ -239,6 +245,12 @@ bound_coeff *bound_coeff_alloc(int nz, int nt, int np)
   b->data = data;
   
   return b;
+}
+
+void bound_coeff_free(bound_coeff *f)
+{
+  free(f->data);
+  free(f);
 }
 
 /**********************************/

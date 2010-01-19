@@ -1,3 +1,12 @@
+/*********************************************************************
+ * remapgridtest.c:                                                  *
+ * Tests the functions that remap scalars defined at gridpoints from *
+ * one surface matched coordinate system to another:                 *
+ * mainly the function "remapgrid" and the functions it calls.       *
+ *                                                                   *
+ * Author: Benjamin D. Lackey                                        *
+ *********************************************************************/
+
 /* To compile type: gcc -I/opt/local/include -I/Users/lackey/Research/Poisson/ -L/opt/local/lib -lm -lfftw3 -lgsl -lgslcblas -Wall -pedantic -ansi -O2 -W /Users/lackey/Research/Poisson/print.c /Users/lackey/Research/Poisson/coefficients.c /Users/lackey/Research/Poisson/coordinatemap.c /Users/lackey/Research/Poisson/fourierylmconversions.c /Users/lackey/Research/Poisson/matrixoperators.c /Users/lackey/Research/Poisson/remainder.c /Users/lackey/Research/Poisson/remap.c /Users/lackey/Research/Poisson/poisson.h remapgridtest.c */
 
 /* c headers */

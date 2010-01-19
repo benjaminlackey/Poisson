@@ -14,6 +14,7 @@
 double boundary(int z, int nt, int np, double theta, double phi);
 double field(int z, int nr, int nt, int np, double xi, double theta, double phi);
 double fieldphysical(int z, double r, double theta, double phi);
+double gradfield_theta(int z, double r, double theta, double phi);
 double T_n(int n, double x);
 
 int main (void)
@@ -32,7 +33,7 @@ int main (void)
   int nt = 7;
   int np = 12; /* must be even */
   int npc;
-  double xi_i, theta_j, phi_k;
+  double xi_i, r_i, theta_j, phi_k;
   double r;
   scalar2d *surface_grid;
   scalar2d *f_grid;
@@ -50,6 +51,9 @@ int main (void)
   scalar3d *fielderase_grid;
   coeff *dfdt_coeff;
   scalar3d *onebyrdfdt_grid;
+  scalar3d *r_scalar3d;
+
+  double grad, grad_analytic, error;
 
   npc = ( np / 2 ) + 1;
 
@@ -77,7 +81,8 @@ int main (void)
   temp_grid = scalar3d_alloc(nz, nr, nt, np); 
   fielderase_grid = scalar3d_alloc(nz, nr, nt, np);
   onebyrdfdt_grid = scalar3d_alloc(nz, nr, nt, np);
-  
+  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+
   /* Evaluate analytic boundary function on the boundary grid points. */
   for ( z = 0; z < nz-1; z++ ) {
     for ( k = 0; k < np; k++ ) {
@@ -88,12 +93,16 @@ int main (void)
       }
     }
   }
-  
+  /*print_scalar2d(surface_grid);*/
+
   /* determine boundary functions given the boundary surfaces */
   map_physicaltogrid_kernel(surface_grid, alphalist, f_grid, g_grid);
   map_physicaltogrid_shell(surface_grid, 1, alphalist, betalist, f_grid, g_grid);
   map_physicaltogrid_ext(surface_grid, alphalist, f_grid);
-  
+/*   print_vector(alphalist); */
+/*   print_vector(betalist); */
+/*   print_scalar2d(f_grid); */
+/*   print_scalar2d(g_grid); */
   /* Find the radial position of each point. */
   rofxtp(r_grid, alphalist, betalist, f_grid, g_grid);
 
@@ -133,10 +142,12 @@ int main (void)
       scalar3d_set(field_grid, z, i, j, k, 0);
     }
   }
-
+  /*print_scalar3d(field_grid);*/
   jacobian1(j1_grid, alphalist, f_grid, g_grid);
+  /*print_scalar3d(j1_grid);*/
   jacobian2(j2_grid, alphalist, betalist, f_grid, g_grid);
-  
+  /*print_scalar3d(j1_grid);*/
+
   /* transforms erase grid so set it to another erasable grid */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
@@ -148,9 +159,9 @@ int main (void)
     }
   }  
   /* evaluate df/dxi */
-  gridtofourier(field_coeff, fielderase_grid, 0, 0, 0);
+  gridtofourier(field_coeff, fielderase_grid, 0, 0);
   dfdxi(dfdxi_coeff, field_coeff);
-  fouriertogrid(dfdxi_grid, dfdxi_coeff, 1, 0, 0);
+  fouriertogrid(dfdxi_grid, dfdxi_coeff, 1, 0);
   
 
   /* transforms erase grid so set it to another erasable grid */
@@ -164,16 +175,16 @@ int main (void)
     }
   }  
   /* evaluate 1/R * df/dtheta */
-  gridtofourier(field_coeff, fielderase_grid, 0, 0, 0);
+  gridtofourier(field_coeff, fielderase_grid, 0, 0);
   dfdthetaprime(dfdt_coeff, field_coeff);
-  dividebyr(onebyrdfdt_grid, dfdt_coeff, 0, 1, 0, alphalist, betalist, f_grid, g_grid);
+  dividebyr(onebyrdfdt_grid, dfdt_coeff, 0, 1, alphalist, betalist, f_grid, g_grid);
   
-  printf("field_grid:\n");
-  print_scalar3d(field_grid);
-  printf("j2_grid:\n"); 
-  print_scalar3d(j2_grid); 
-  printf("onebyrdfdt_grid:\n");
-  print_scalar3d(onebyrdfdt_grid); 
+/*   printf("field_grid:\n"); */
+/*   print_scalar3d(field_grid); */
+/*   printf("j2_grid:\n");  */
+/*   print_scalar3d(j2_grid);  */
+/*   printf("onebyrdfdt_grid:\n"); */
+/*   print_scalar3d(onebyrdfdt_grid);  */
   
   /* set 1/r * df/dtheta = (1/R)*dfdt' - (J_2/J_1)*df/dxi */
   for ( z = 0; z < nz; z++ ) {
@@ -186,20 +197,38 @@ int main (void)
     }
   }
 
-  print_scalar3d(temp_grid);
-  
-  /* print to file the function and radial position for all gridpoints */
-  fpgrid=fopen("onebyrdfdtheta.txt", "w");
-  for ( z = 0; z < nz-1; z++ ) {
-    for ( j = 0; j < nt; j++ ) {
-      theta_j = PI*j/(nt-1);
-      for ( i = 1; i < nr; i++ ) { /* dfdtheta is not well defined for r = 0? */ 
-	for ( k = 0; k < np; k++ ) {
-	  fprintf(fpgrid, "%.18e\t%.18e\n", theta_j, scalar3d_get(temp_grid, z, i, j, k));
-	}
-      }
-    }
-  }
+  /*print_scalar3d(temp_grid);*/
+  /* Find the radial position of each point. */
+  rofxtp(r_scalar3d, alphalist, betalist, f_grid, g_grid);
+  print_scalar3d(r_scalar3d);
+/*   for ( z = 0; z < nz-1; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  grad = scalar3d_get(temp_grid, z, i, j, k); */
+/* 	  grad_analytic = gradfield_theta(z, r_i, theta_j, phi_k); */
+/* 	  error = (grad - grad_analytic)/grad_analytic; */
+/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, grad, grad_analytic, error); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+
+/*   /\* print to file the function and radial position for all gridpoints *\/ */
+/*   fpgrid=fopen("onebyrdfdtheta.txt", "w"); */
+/*   for ( z = 0; z < nz-1; z++ ) { */
+/*     for ( j = 0; j < nt; j++ ) { */
+/*       theta_j = PI*j/(nt-1); */
+/*       for ( i = 1; i < nr; i++ ) { /\* dfdtheta is not well defined for r = 0? *\/  */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  fprintf(fpgrid, "%.18e\t%.18e\n", theta_j, scalar3d_get(temp_grid, z, i, j, k)); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
   
   return 0;
 }
@@ -220,7 +249,7 @@ double boundary(int nt, int np, int z, double theta, double phi)
 {
   if(z==0)
     return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi)));
-  else if(z==1)
+  else
     return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi)));
 }
 
@@ -267,6 +296,10 @@ double fieldphysical(int z, double r, double theta, double phi)
   return r*cos(theta);
 }
 
+double gradfield_theta(int z, double r, double theta, double phi)
+{
+    return -sin(theta);
+}
 
 /******************************************************/
 /* Evaluate a function at the point (xi, theta, phi). */
