@@ -793,23 +793,18 @@ void functiontogrid_xi(scalar3d *func_scalar3d, double (*func)(int z, double xi,
 /* Returns the value at the surface-matched collocation points.                             */
 /* r=0 and r=inf need to be treated analytically.                                           */
 /********************************************************************************************/
-void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g)
+void dividebyr(scalar3d *fbyr_scalar3d, coeff *f_coeff, int xishift, int thetashift, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g)
 {
-  int z;
-  int i;
-  int j;
-  int k;
-  int nz;
-  int nr;
-  int nt;
-  int np;
-  int npc;
+  int z, i, j, k, imag;
+  int nz, nr, nt, np, npc;
   double alpha;
   double beta;
   double xi;
   double f_gridpoint;
   double den;
   double sum;
+  bound_coeff *fbyxi_bound_coeff;
+  scalar2d *fbyxi_scalar2d;
 
   nz = f_coeff->nz;
   nr = f_coeff->nr;
@@ -817,38 +812,80 @@ void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift,
   np = f_coeff->np;
 
   npc = ( np / 2 ) + 1;  
+
+  fbyxi_bound_coeff = bound_coeff_alloc(1, nt, np);
+  fbyxi_scalar2d = scalar2d_alloc(1, nt, np);
+
+  /*>>>>>>>>>>> EVALUATE F/R AT R=0 <<<<<<<<<<<<<<*/
   
-  /* Evaluate f/R at r = 0. */
-  /* set theta = phi = 0 and use l'Hopital's rule to take lim_{xi->0} f'(xi)/R'(xi) */
-  /* the limit should be the same from any direction (theta, phi). */
-  /* start adding from highest order coefficients (they have smallest values) */
-  alpha = gsl_vector_get(alphalist, 0);
-  sum = 0.0;
-  for(k=thetashift; k<npc; k+=2) {
-    for(j=1-xishift; j<nt-1+xishift; j+=2) {
-      for(i=0; i<nr-1+xishift; i++) {
-	sum += neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, 0);
-	/*printf("k=%d, j=%d, i=%d, coeff=%f term=%f\n", k, j, i, coeff_get(f_coeff, 0, i, j, k, phishift), neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, phishift));*/
+  /* Divide by xi at xi = 0. */
+  /* Use l'Hopital's rule to take lim_{xi->0} f(xi)/xi. */
+  /* Only odd Chebyshev polynomials survive. */
+  /*     -odd Chebyshev series if j is odd or */
+  /*     -j is even and coeff was acted on by an odd number of d/dxi derivitives */  
+  for(imag=0; imag<=1; imag++) {
+    for(k = imag; k < npc-imag; k++) { /* imaginary parts for k=0 and k=npc-1 are zero */ 
+      for(j = 1-xishift; j < nt-1+xishift; j += 2) {
+	sum = 0.0;
+	for(i=nr-2+xishift; i>=0; i--) {
+	  sum += neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, imag);
+	}
+	bound_coeff_set(fbyxi_bound_coeff, 0, j, k, imag, sum);
       }
     }
   }
-  sum /= alpha;
-  /*printf("alpha = %f\n", alpha); 
-    printf("sum = %f\n", sum);*/ 
+  print_bound_coeff(fbyxi_bound_coeff);
 
+  fouriertogrid_bound(fbyxi_scalar2d, fbyxi_bound_coeff, thetashift);
+  print_scalar2d(fbyxi_scalar2d); 
 
   /* convert to values on grid: */
   /* fbyr_grid is still just f at grid points */
-  fouriertogrid(fbyr_grid, f_coeff, xishift, thetashift);
+  fouriertogrid(fbyr_scalar3d, f_coeff, xishift, thetashift);
 
-  /* should be same for all angles */
+  /* evaluate at r=0 for each angle theta, phi */
+  alpha = gsl_vector_get(alphalist, 0);
   for(j=0; j<nt; j++) {
     for(k=0; k<np; k++) {
-      scalar3d_set(fbyr_grid, 0, 0, j, k, sum);
-      /*printf("k=%d, j=%d, sum=%f\n", k, j, scalar3d_get(fbyr_grid, 0, 0, j, k));*/
+      scalar3d_set(fbyr_scalar3d, 0, 0, j, k, scalar2d_get(fbyxi_scalar2d, 0, j, k) / alpha);
+      /*printf("k=%d, j=%d, sum=%f\n", k, j, scalar3d_get(fbyr_scalar3d, 0, 0, j, k));*/
     }
-  }  
+  }
 
+  /* print_coeff(f_coeff); */
+/*   /\* Evaluate f/R at r = 0. *\/ */
+/*   /\* set theta = phi = 0 and use l'Hopital's rule to take lim_{xi->0} f'(xi)/R'(xi) *\/ */
+/*   /\* the limit should be the same from any direction (theta, phi). *\/ */
+/*   /\* start adding from highest order coefficients (they have smallest values) *\/ */
+/*   alpha = gsl_vector_get(alphalist, 0); */
+/*   sum = 0.0; */
+/*   for(k=thetashift; k<npc; k+=2) { */
+/*     for(j=1-xishift; j<nt-1+xishift; j+=2) { */
+/*       for(i=0; i<nr-1+xishift; i++) { */
+/* 	sum += neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, REAL); */
+/* 	printf("k=%d, j=%d, i=%d, coeff=%.18e term=%.18e\n", k, j, i, coeff_get(f_coeff, 0, i, j, k, REAL), neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, REAL)); */
+/*       } */
+/*     } */
+/*   } */
+/*   printf("sum = %f\n", sum); */
+/*   printf("alpha = %f\n", alpha);    */
+/*   sum /= alpha; */
+  
+
+
+/*   /\* convert to values on grid: *\/ */
+/*   /\* fbyr_grid is still just f at grid points *\/ */
+/*   fouriertogrid(fbyr_grid, f_coeff, xishift, thetashift); */
+
+/*   /\* should be same for all angles *\/ */
+/*   for(j=0; j<nt; j++) { */
+/*     for(k=0; k<np; k++) { */
+/*       scalar3d_set(fbyr_grid, 0, 0, j, k, sum); */
+/*       /\*printf("k=%d, j=%d, sum=%f\n", k, j, scalar3d_get(fbyr_grid, 0, 0, j, k));*\/ */
+/*     } */
+/*   }   */
+
+ /*>>>>>>>>>>> EVALUATE F/R EVERYWHERE ELSE <<<<<<<<<<<<<<*/
 
   /* kernel (except for r = 0) */
   /* return result in same structure */
@@ -856,11 +893,11 @@ void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift,
     xi = sin(PI*i/(2*(nr-1)));
     for(j=0; j<nt; j++) {
       for(k=0; k<np; k++) {
-	f_gridpoint = scalar3d_get(fbyr_grid, 0, i, j, k);
+	f_gridpoint = scalar3d_get(fbyr_scalar3d, 0, i, j, k);
 	den = alpha*(xi
 		     + xi*xi*xi*xi*(3.0-2.0*xi*xi)*scalar2d_get(f, 0, j, k)
 		     + 0.5*xi*xi*xi*(5.0-3.0*xi*xi)*scalar2d_get(g, 0, j, k));
-	scalar3d_set(fbyr_grid, 0, i, j, k, f_gridpoint/den);
+	scalar3d_set(fbyr_scalar3d, 0, i, j, k, f_gridpoint/den);
       }
     }
   }
@@ -875,12 +912,12 @@ void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift,
       xi = -cos(PI*i/(nr-1));
       for(j=0; j<nt; j++) {
 	for(k=0; k<np; k++) {
-	  f_gridpoint = scalar3d_get(fbyr_grid, z, i, j, k);
+	  f_gridpoint = scalar3d_get(fbyr_scalar3d, z, i, j, k);
 	  den = alpha*(xi
 		       + 0.25*(xi*xi*xi-3.0*xi+2.0)*scalar2d_get(f, z, j, k)
 		       + 0.25*(-xi*xi*xi+3.0*xi+2.0)*scalar2d_get(g, z, j, k))
 	    + beta;
-	  scalar3d_set(fbyr_grid, z, i, j, k, f_gridpoint/den);
+	  scalar3d_set(fbyr_scalar3d, z, i, j, k, f_gridpoint/den);
 	}
       }
     }
@@ -893,19 +930,21 @@ void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift,
     xi = -cos(PI*i/(nr-1));
     for(j=0; j<nt; j++) {
       for(k=0; k<np; k++) {
-	f_gridpoint = scalar3d_get(fbyr_grid, nz-1, i, j, k);
+	f_gridpoint = scalar3d_get(fbyr_scalar3d, nz-1, i, j, k);
 	den = alpha*(xi + 0.25*(xi*xi*xi-3.0*xi+2.0)*scalar2d_get(f, nz-1, j, k) - 1.0);
-	scalar3d_set(fbyr_grid, nz-1, i, j, k, f_gridpoint/den);
+	scalar3d_set(fbyr_scalar3d, nz-1, i, j, k, f_gridpoint/den);
       }
     }
   }
   /* set f/U to 0.0 at r = inf since f dacays faster than 1/r */
   for(j=0; j<nt; j++) {
     for(k=0; k<np; k++) {
-      scalar3d_set(fbyr_grid, nz-1, nr-1, j, k, 0.0);
+      scalar3d_set(fbyr_scalar3d, nz-1, nr-1, j, k, 0.0);
     }
   }
   
+  bound_coeff_free(fbyxi_bound_coeff);
+  scalar2d_free(fbyxi_scalar2d);
 }
 
 
@@ -2504,7 +2543,7 @@ void fouriertogrid(scalar3d *c_zijk, coeff *c_coeff, int xishift, int thetashift
       }
       
     } 
-    print_coeff(coeff); 
+    /*print_coeff(coeff);*/ 
     /*>>>>>>>>>>>>>>>>>>>>>> INVERSE THETA TRANSFORM <<<<<<<<<<<<<<<<<<<<<<<<*/
     
     /* cosine transform */

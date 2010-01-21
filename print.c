@@ -172,7 +172,7 @@ void print_coeff(coeff *c){
       for(j=0; j<nt; j++) {
 		printf("j = %d: ", j);
 		for(k=0; k<npc; k++){
-		  printf("(%f, %f)  ", coeff_get(c, z, i, j, k, REAL), coeff_get(c, z, i, j, k, IMAG));
+		  printf("(%.4e, %.4e)  ", coeff_get(c, z, i, j, k, REAL), coeff_get(c, z, i, j, k, IMAG));
 		}
 		printf("\n");
       }
@@ -181,6 +181,36 @@ void print_coeff(coeff *c){
   }
   printf("\n");
 }
+
+
+/* void print_coeff(coeff *c){ */
+/*   int nz = c->nz; */
+/*   int nr = c->nr; */
+/*   int nt = c->nt; */
+/*   int np = c->np; */
+/*   int z, i, j, k; */
+  
+/*   int npc = np/2 + 1; */
+
+
+/*   for(z=0; z<nz; z++) { */
+/*     for(i=0; i<nr; i++) { */
+/*       printf("z = %d, i = %d:\n       ", z, i); */
+/*       for(k=0; k<npc; k++) */
+/* 		printf("k = %d                 ", k); */
+/*       printf("\n"); */
+/*       for(j=0; j<nt; j++) { */
+/* 		printf("j = %d: ", j); */
+/* 		for(k=0; k<npc; k++){ */
+/* 		  printf("(%f, %f)  ", coeff_get(c, z, i, j, k, REAL), coeff_get(c, z, i, j, k, IMAG)); */
+/* 		} */
+/* 		printf("\n"); */
+/*       } */
+/* 	  printf("\n"); */
+/*     } */
+/*   } */
+/*   printf("\n"); */
+/* } */
 
 /**********************************************/
 /* Print all the coefficients for a function. */

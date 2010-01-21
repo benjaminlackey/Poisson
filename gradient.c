@@ -217,12 +217,14 @@ void gradient_phi(scalar3d *gradf_phi_scalar3d, scalar3d *f_scalar3d, gsl_vector
   
   /* calculate df/dxi by going to coefficients then back to gridpoints */
   gridtofourier(f_coeff, f_scalar3d, 0, 0);
+  /*print_coeff(f_coeff);*/
   dfdxi(dfdxi_coeff, f_coeff);
   fouriertogrid(dfdxi_scalar3d, dfdxi_coeff, 1, 0);
   
   /* calculate 1/(R*sin(theta)) * df/dphi' */
   dfdphiprime(dfdp_coeff, f_coeff);
   dividebysin(dfdp_bysint_coeff, dfdp_coeff);
+  /*print_coeff(dfdp_bysint_coeff);*/
   dividebyr(dfdp_byrsint_scalar3d, dfdp_bysint_coeff, 1, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   
   /* calculate the xi and theta part of the Jacobian */
