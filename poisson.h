@@ -171,6 +171,9 @@ void dividebysin(coeff *fbysin_coeff, coeff *f_coeff);
 void dividebysin_bound(bound_coeff *fbysin_bound_coeff, bound_coeff *f_bound_coeff);
 void jacobian3(scalar3d *jacobian, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
 void onebyrsin_d2rbydpdx(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
+void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void onebyr_d2r_dthetadxi(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void onebyr_d2f_dthetadxi(scalar3d *onebyr_d2f_dthetadxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void dfdphiprime(coeff *dfdp_coeff, coeff *f_coeff);
 void laplace_ang(coeff *lapf_coeff, coeff *f_coeff);
 

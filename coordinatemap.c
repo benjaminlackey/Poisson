@@ -852,39 +852,6 @@ void dividebyr(scalar3d *fbyr_scalar3d, coeff *f_coeff, int xishift, int thetash
     }
   }
 
-  /* print_coeff(f_coeff); */
-/*   /\* Evaluate f/R at r = 0. *\/ */
-/*   /\* set theta = phi = 0 and use l'Hopital's rule to take lim_{xi->0} f'(xi)/R'(xi) *\/ */
-/*   /\* the limit should be the same from any direction (theta, phi). *\/ */
-/*   /\* start adding from highest order coefficients (they have smallest values) *\/ */
-/*   alpha = gsl_vector_get(alphalist, 0); */
-/*   sum = 0.0; */
-/*   for(k=thetashift; k<npc; k+=2) { */
-/*     for(j=1-xishift; j<nt-1+xishift; j+=2) { */
-/*       for(i=0; i<nr-1+xishift; i++) { */
-/* 	sum += neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, REAL); */
-/* 	printf("k=%d, j=%d, i=%d, coeff=%.18e term=%.18e\n", k, j, i, coeff_get(f_coeff, 0, i, j, k, REAL), neg1toi(i)*(2*i+1)*coeff_get(f_coeff, 0, i, j, k, REAL)); */
-/*       } */
-/*     } */
-/*   } */
-/*   printf("sum = %f\n", sum); */
-/*   printf("alpha = %f\n", alpha);    */
-/*   sum /= alpha; */
-  
-
-
-/*   /\* convert to values on grid: *\/ */
-/*   /\* fbyr_grid is still just f at grid points *\/ */
-/*   fouriertogrid(fbyr_grid, f_coeff, xishift, thetashift); */
-
-/*   /\* should be same for all angles *\/ */
-/*   for(j=0; j<nt; j++) { */
-/*     for(k=0; k<np; k++) { */
-/*       scalar3d_set(fbyr_grid, 0, 0, j, k, sum); */
-/*       /\*printf("k=%d, j=%d, sum=%f\n", k, j, scalar3d_get(fbyr_grid, 0, 0, j, k));*\/ */
-/*     } */
-/*   }   */
-
  /*>>>>>>>>>>> EVALUATE F/R EVERYWHERE ELSE <<<<<<<<<<<<<<*/
 
   /* kernel (except for r = 0) */
@@ -1673,15 +1640,8 @@ void jacobian3(scalar3d *jacobian, gsl_vector *alphalist, gsl_vector *betalist, 
 /**************************************************************/
 void onebyrsin_d2rbydpdx(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g)
 {
-  int z;
-  int i;
-  int j;
-  int k;
-  int nz;
-  int nr;
-  int nt;
-  int np;
-  int npc;
+  int z, i, j, k;
+  int nz, nr, nt, np, npc;
   double dcoskpdp;
   double dsinkpdp;
   double alpha;
@@ -1797,6 +1757,244 @@ void onebyrsin_d2rbydpdx(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *
     }
   }
   
+}
+
+void onebyr_d2f_dthetadxi(scalar3d *onebyr_d2f_dthetadxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int nz, nr, nt, np;
+  coeff *f_coeff;
+  coeff *df_dxi_coeff;
+  coeff *d2f_dthetadxi_coeff;
+  
+  nz = f_scalar3d->nz;
+  nr = f_scalar3d->nr;
+  nt = f_scalar3d->nt;
+  np = f_scalar3d->np;
+
+  f_coeff = coeff_alloc(nz, nr, nt, np);
+  df_dxi_coeff = coeff_alloc(nz, nr, nt, np);
+  d2f_dthetadxi_coeff = coeff_alloc(nz, nr, nt, np);
+
+  /* evaluate coefficients of f */
+  gridtofourier(f_coeff, f_scalar3d, 0, 0);
+  printf("f_coeff is:\n");
+  print_coeff(f_coeff);
+
+  /* df/dxi. xishift: 0->1 */
+  dfdxi(df_dxi_coeff, f_coeff);
+  print_coeff(df_dxi_coeff);
+
+  /* d/dtheta' (df/dxi) thetashift: 0->1*/
+  dfdthetaprime(d2f_dthetadxi_coeff, df_dxi_coeff);
+  print_coeff(d2f_dthetadxi_coeff);
+
+  /* 1/R d/dtheta' (df/dxi) */
+  dividebyr(onebyr_d2f_dthetadxi_scalar3d, d2f_dthetadxi_coeff, 1, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+
+  coeff_free(f_coeff);
+  coeff_free(df_dxi_coeff);
+  coeff_free(d2f_dthetadxi_coeff);
+}
+
+
+/**************************************************************/
+/* 1 / R * d^2 R(xi, theta, phi) / (d theta d xi)             */
+/**************************************************************/
+void onebyr_d2r_dthetadxi(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int z, i, j, k, imag;
+  int nz, nr, nt, np, npc;
+  bound_coeff *f_bound_coeff;
+  bound_coeff *g_bound_coeff;
+  scalar2d *dfdtheta_scalar2d;
+  scalar2d *dgdtheta_scalar2d;
+  double xi;
+  double alpha;
+  double beta;
+  double num;
+  double den;  
+
+  nz = out_scalar3d->nz;
+  nr = out_scalar3d->nr;
+  nt = out_scalar3d->nt;
+  np = out_scalar3d->np;
+  
+  npc = ( np / 2 ) + 1;
+  
+  /* allocate memory here */
+  f_bound_coeff = bound_coeff_alloc(nz, nt, np);
+  g_bound_coeff = bound_coeff_alloc(nz, nt, np);
+  dfdtheta_scalar2d = scalar2d_alloc(nz, nt, np);
+  dgdtheta_scalar2d = scalar2d_alloc(nz, nt, np);
+  
+  /* go to Fourier space */
+  gridtofourier_bound(f_bound_coeff, f_scalar2d);
+  gridtofourier_bound(g_bound_coeff, g_scalar2d);
+
+  /*>>>>>>>> take d/dtheta derivatives of f and g for all zones <<<<<<<<<*/
+  /*>>>>>>>>>>>>>> and return them in the same structure <<<<<<<<<<<<<<<<*/
+  
+  /* d/dt[a_j cos(j theta)] = -j a_j sin(j theta) */  
+  for(imag=0; imag<=1; imag++) {
+    for(z=0; z<nz; z++) {   
+      for(k=2*imag; k<npc-imag; k+=2) { /* imaginary parts for k=0 and k=npc-1 are zero */
+	for(j=0; j<nt; j++) {
+	  /* f: */
+	  bound_coeff_set(f_bound_coeff, z, j, k, imag, 
+			 -j * bound_coeff_get(f_bound_coeff, z, j, k, imag));
+	  if(z < nz-1) { /* g is not defined in external zone (nz-1) */
+	    /* g: */
+	    bound_coeff_set(g_bound_coeff, z, j, k, imag, 
+			   -j * bound_coeff_get(g_bound_coeff, z, j, k, imag));
+	  }
+	}
+      }
+    }
+  }
+
+  /* d/dt[a_j sin(j theta)] = +j a_j cos(j theta) */
+  for(imag=0; imag<=1; imag++) {
+    for(z=0; z<nz; z++) {   
+      for(k=1; k<npc-imag; k+=2) { /* imaginary parts for k=0 and k=npc-1 are zero */
+	for(j=1; j<nt-1; j++) {  
+	  /* f: */
+	  bound_coeff_set(f_bound_coeff, z, j, k, imag, 
+			 j * bound_coeff_get(f_bound_coeff, z, j, k, imag));
+	  if(z < nz-1) { /* g is not defined in external zone (nz-1) */
+	    /* g: */
+	    bound_coeff_set(g_bound_coeff, z, j, k, imag, 
+			   j * bound_coeff_get(g_bound_coeff, z, j, k, imag));
+	  }
+	}
+      }
+    }
+  }
+  
+  /* return from Fourier space to grid */
+  fouriertogrid_bound(dfdtheta_scalar2d, f_bound_coeff, 1);
+  fouriertogrid_bound(dgdtheta_scalar2d, g_bound_coeff, 1);
+
+  /*>>>>>>>>> Now evaluate analytical expressions for (1/R) (d^2R(xi, theta, phi)/(dthetadxi)). <<<<<<<<<<*/
+  
+  /* kernel */
+  z = 0;
+  for(i=0; i<nr; i++) {
+    xi = sin(PI*i/(2*(nr-1)));
+    for(j=0; j<nt; j++) {
+      for(k=0; k<np; k++) {
+	num = 12.0*xi*xi*(1.0-xi*xi)*scalar2d_get(dfdtheta_scalar2d, z, j, k)
+	  + 7.5*xi*(1.0-xi*xi)*scalar2d_get(dgdtheta_scalar2d, z, j, k);
+	den = 1.0 
+	  + xi*xi*xi*(3.0-2.0*xi*xi)*scalar2d_get(f_scalar2d, z, j, k)
+	  + 0.5*xi*xi*(5.0-3.0*xi*xi)*scalar2d_get(g_scalar2d, z, j, k);
+	scalar3d_set(out_scalar3d, z, i, j, k, num/den);
+      }
+    }
+  }
+  
+  /* shells */
+  for(z=1; z<nz-1; z++) {
+    alpha = gsl_vector_get(alpha_vector, z);
+    beta = gsl_vector_get(beta_vector, z);
+    for(i=0; i<nr; i++) {
+      xi = -cos(PI*i/(nr-1));
+      for(j=0; j<nt; j++) {
+	for(k=0; k<np; k++) {
+	  num = 0.75*(xi*xi-1.0)*scalar2d_get(dfdtheta_scalar2d, z, j, k)
+	    + 0.75*(-xi*xi+1.0)*scalar2d_get(dgdtheta_scalar2d, z, j, k);
+	  den = xi
+	    + 0.25*(xi*xi*xi-3.0*xi+2.0)*scalar2d_get(f_scalar2d, z, j, k)
+	    + 0.25*(-xi*xi*xi+3.0*xi+2.0)*scalar2d_get(g_scalar2d, z, j, k)
+	    + beta/alpha;
+	  scalar3d_set(out_scalar3d, z, i, j, k, num/den);
+	}
+      }
+    }
+  }
+  
+  /* external domain */
+  z = nz-1;
+  for(i=0; i<nr; i++) {
+    xi = -cos(PI*i/(nr-1));
+    for(j=0; j<nt; j++) {
+      for(k=0; k<np; k++) {
+	num = 0.75*(xi+1.0)*scalar2d_get(dfdtheta_scalar2d, z, j, k);
+	den = 1.0 + 0.25*(xi*xi+xi-2.0)*scalar2d_get(f_scalar2d, z, j, k);
+	scalar3d_set(out_scalar3d, z, i, j, k, num/den);
+      }
+    }
+  }
+  
+  bound_coeff_free(f_bound_coeff);
+  bound_coeff_free(g_bound_coeff);
+  scalar2d_free(dfdtheta_scalar2d);
+  scalar2d_free(dgdtheta_scalar2d);
+}
+
+
+/*************************************/
+/*      R / (xi + beta/alpha)        */
+/*************************************/
+void r_xiplusb_a(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int z, i, j, k;
+  int nz, nr, nt, np;
+  double xi;
+  double alpha;
+  double beta;
+  double num;
+  double den;  
+
+  nz = out_scalar3d->nz;
+  nr = out_scalar3d->nr;
+  nt = out_scalar3d->nt;
+  np = out_scalar3d->np;
+    
+  /* kernel */
+  z = 0;
+  alpha = gsl_vector_get(alpha_vector, z);
+  for(i=0; i<nr; i++) {
+    xi = sin(PI*i/(2*(nr-1)));
+    for(j=0; j<nt; j++) {
+      for(k=0; k<np; k++) {
+	num = alpha*(1.0 
+		     + xi*xi*xi*(3.0-2.0*xi*xi)*scalar2d_get(f_scalar2d, z, j, k)
+		     + 0.5*xi*xi*(5.0-3.0*xi*xi)*scalar2d_get(g_scalar2d, z, j, k));
+	scalar3d_set(out_scalar3d, z, i, j, k, num);
+      }
+    }
+  }
+  
+  /* shells */
+  for(z=1; z<nz-1; z++) {
+    alpha = gsl_vector_get(alpha_vector, z);
+    beta = gsl_vector_get(beta_vector, z);
+    for(i=0; i<nr; i++) {
+      xi = -cos(PI*i/(nr-1));
+      for(j=0; j<nt; j++) {
+	for(k=0; k<np; k++) {
+	  num = alpha*(xi
+		       + 0.25*(xi*xi*xi-3.0*xi+2.0)*scalar2d_get(f_scalar2d, z, j, k)
+		       + 0.25*(-xi*xi*xi+3.0*xi+2.0)*scalar2d_get(g_scalar2d, z, j, k)) + beta;
+	  den = xi + beta/alpha;
+	  scalar3d_set(out_scalar3d, z, i, j, k, num/den);
+	}
+      }
+    }
+  }
+  
+  /* external domain */
+  z = nz-1;
+  alpha = gsl_vector_get(alpha_vector, z);
+  for(i=0; i<nr; i++) {
+    xi = -cos(PI*i/(nr-1));
+    for(j=0; j<nt; j++) {
+      for(k=0; k<np; k++) {
+	num = alpha*(1.0 + 0.25*(xi*xi+xi-2.0)*scalar2d_get(f_scalar2d, z, j, k));
+	scalar3d_set(out_scalar3d, z, i, j, k, num);
+      }
+    }
+  }
 }
 
 
