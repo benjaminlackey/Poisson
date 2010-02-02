@@ -1,7 +1,6 @@
 /*********************************************************************************
  * onebyrsintheta_d2f_dphidxi_test.c:                                            *
- * Compares onebyrsin_d2rbydpdx to onebyrsintheta_d2f_dphidxi.                   *
- * Both functions return same values when R(xi, theta, phi) = f(xi, theta, phi). * 
+ * Compares onebyrsintheta_d2f_dphidxi to analytical function.                   *
  *                                                                               *
  * Author: Benjamin D. Lackey                                                    *
  *********************************************************************************/
@@ -26,8 +25,9 @@
 /* own header */
 #include "poisson.h"
 
-void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_sclar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 double boundary(int z, double theta, double phi);
+double field(int z, double xi, double theta, double phi);
+double onebysintheta_d2field_dphidxi(int z, double xi, double theta, double phi);
 
 
 int main (void)
@@ -37,16 +37,17 @@ int main (void)
   int nr = 35; /* must be odd? */
   int nt;
   int np = 30; /* must be even */
-  double r_i, theta_j, phi_k;
+  double xi_i, theta_j, phi_k;
   scalar2d *boundary_scalar2d;
   scalar2d *f_scalar2d;
   scalar2d *g_scalar2d;
   gsl_vector *alpha_vector;
   gsl_vector *beta_vector;
   scalar3d *r_scalar3d;
-  scalar3d *outf_scalar3d;
-  scalar3d *outr_scalar3d;
-  double outf, outr, diff;
+  scalar3d *field_scalar3d;
+  scalar3d *out_scalar3d;
+  scalar3d *onebysintheta_d2f_dphidxi_scalar3d;
+  double num, anal, error;
 
   nt = np/2 + 1;
   
@@ -57,34 +58,50 @@ int main (void)
   alpha_vector = gsl_vector_calloc(nz);
   beta_vector = gsl_vector_calloc(nz);
   r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
-  outf_scalar3d = scalar3d_alloc(nz, nr, nt, np);
-  outr_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  field_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  out_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  onebysintheta_d2f_dphidxi_scalar3d = scalar3d_alloc(nz, nr, nt, np);
 
   /* evaluate boundary function on gridpoints */
   boundarytogrid(boundary_scalar2d, boundary);
   
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(boundary_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  
+  /* evaluate field at gridpoints */
+  functiontogrid_xi(field_scalar3d, field);
 
+  /* take derivatives */
+  onebyrsintheta_d2f_dphidxi(out_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  
   /* evaluate the function R(xi, theta, phi */
   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
 
-  /* calculate 1/(R*sin(theta')) d^f/(dphi'dxi) with 2 different functions */
-  onebyrsintheta_d2f_dphidxi(outf_scalar3d, r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  onebyrsin_d2rbydpdx(outr_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-
-  /* compare them */
+  /* multiply by R to get d^2f / (dtheta dxi) */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
-	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
+	  scalar3d_set(onebysintheta_d2f_dphidxi_scalar3d, z, i, j, k,
+		       scalar3d_get(r_scalar3d, z, i, j, k)*scalar3d_get(out_scalar3d, z, i, j, k));
+	}
+      }
+    }
+  }
+
+
+  /* compare numerical to analytic values of d^2f/(dtheta' dxi) */
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  xi_i = ((z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)));
 	  theta_j = PI*j/(nt-1);
 	  phi_k = 2*PI*k/np;
-	  outf = scalar3d_get(outf_scalar3d, z, i, j, k);
-	  outr = scalar3d_get(outr_scalar3d, z, i, j, k);
-	  diff = (outf - outr)/outr;
-	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, outf, outr, diff);
+ 	  num = scalar3d_get(onebysintheta_d2f_dphidxi_scalar3d, z, i, j, k);
+ 	  anal = onebysintheta_d2field_dphidxi(z, xi_i, theta_j, phi_k);
+	  error = (num - anal)/(anal);
+	  printf("z=%d, i=%d, j=%d, k=%d, xi_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, xi_i, theta_j, phi_k, num, anal, error);
 	}
       }
     }
@@ -97,50 +114,11 @@ int main (void)
   gsl_vector_free(alpha_vector);
   gsl_vector_free(beta_vector);
   scalar3d_free(r_scalar3d);
-  scalar3d_free(outr_scalar3d);
-  scalar3d_free(outf_scalar3d);
-
+  scalar3d_free(field_scalar3d);
+  scalar3d_free(out_scalar3d);
+  scalar3d_free(onebysintheta_d2f_dphidxi_scalar3d);
+  
   return 0;
-}
-
-
-void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
-{
-  int nz, nr, nt, np;
-  coeff *f_coeff;
-  coeff *df_dxi_coeff;
-  coeff *d2f_dphidxi_coeff;
-  coeff *onebysintheta_d2f_dphidxi_coeff;
-  
-  nz = f_scalar3d->nz;
-  nr = f_scalar3d->nr;
-  nt = f_scalar3d->nt;
-  np = f_scalar3d->np;
-
-  f_coeff = coeff_alloc(nz, nr, nt, np);
-  df_dxi_coeff = coeff_alloc(nz, nr, nt, np);
-  d2f_dphidxi_coeff = coeff_alloc(nz, nr, nt, np);
-  onebysintheta_d2f_dphidxi_coeff = coeff_alloc(nz, nr, nt, np);
-
-  /* evaluate coefficients of f */
-  gridtofourier(f_coeff, f_scalar3d, 0, 0);
-
-  /* df/dxi. xishift: 0->1 */
-  dfdxi(df_dxi_coeff, f_coeff);
-  
-  /* d/dphi (df/dxi) */
-  dfdphiprime(d2f_dphidxi_coeff, df_dxi_coeff);
-  
-  /* 1/sin(theta') d/dphi (df/dxi). xishift: 1->0, thetashift: 0->1 */
-  dividebysin(onebysintheta_d2f_dphidxi_coeff, d2f_dphidxi_coeff);
-
-  /* 1/(R*sin(theta')) d/dphi (df/dxi) */
-  dividebyr(onebyrsintheta_d2f_dphidxi_scalar3d, onebysintheta_d2f_dphidxi_coeff, 0, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-
-  coeff_free(f_coeff);
-  coeff_free(df_dxi_coeff);
-  coeff_free(d2f_dphidxi_coeff);
-  coeff_free(onebysintheta_d2f_dphidxi_coeff);
 }
 
 
@@ -152,7 +130,7 @@ void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_scalar3d, s
 /*   if(z==0) */
 /*     return 1.0; */
 /*   else */
-/*     return 5.0; */
+/*     return 3.0; */
 /* } */
 double boundary(int z, double theta, double phi)
 {
@@ -160,4 +138,22 @@ double boundary(int z, double theta, double phi)
     return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
   else
     return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
+}
+
+
+
+/*********************************************/
+/* Some function in spherical coordinates.   */
+/*********************************************/
+double field(int z, double xi, double theta, double phi)
+{
+  return xi*xi*sin(theta)*sin(theta)*(cos(2.0*phi) + sin(2.0*phi));
+}
+
+/**************************************/
+/* The corresponding theta gradient.  */
+/**************************************/
+double onebysintheta_d2field_dphidxi(int z, double xi, double theta, double phi)
+{
+  return 2.0*xi*sin(theta)*(-2.0*sin(2.0*phi) + 2.0*cos(2.0*phi));
 }

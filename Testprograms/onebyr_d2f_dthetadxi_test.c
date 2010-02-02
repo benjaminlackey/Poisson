@@ -71,31 +71,9 @@ int main (void)
 
   /*>>>>> compare both versions of 1/(R*sin(theta')) d^2R/(dphi'dxi) with 2 different functions <<<<<<*/
 
- /*  onebyrsintheta_d2f_dphidxi(outf_scalar3d, r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
-/*   onebyrsin_d2rbydpdx(outr_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+  onebyrsintheta_d2f_dphidxi(outf_scalar3d, r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  onebyrsintheta_d2r_dphidxi(outr_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
 
-/*   /\* compare them *\/ */
-/*   for ( z = 0; z < nz; z++ ) { */
-/*     for ( i = 0; i < nr; i++ ) { */
-/*       for ( j = 0; j < nt; j++ ) { */
-/* 	for ( k = 0; k < np; k++ ) { */
-/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
-/* 	  theta_j = PI*j/(nt-1); */
-/* 	  phi_k = 2*PI*k/np; */
-/* 	  outf = scalar3d_get(outf_scalar3d, z, i, j, k); */
-/* 	  outr = scalar3d_get(outr_scalar3d, z, i, j, k); */
-/* 	  diff = (outf - outr)/outr; */
-/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, outf, outr, diff); */
-/* 	} */
-/*       } */
-/*     } */
-/*   } */
-
-  /*>>>>> compare both versions of 1/R d^2R/(dtheta'dxi) with 2 different functions <<<<<<*/
-
-  onebyr_d2f_dthetadxi(outf_scalar3d, r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  onebyr_d2r_dthetadxi(outr_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  
   /* compare them */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
@@ -112,6 +90,28 @@ int main (void)
       }
     }
   }
+
+  /*>>>>> compare both versions of 1/R d^2R/(dtheta'dxi) with 2 different functions <<<<<<*/
+
+/*   onebyr_d2f_dthetadxi(outf_scalar3d, r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+/*   onebyr_d2r_dthetadxi(outr_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+  
+/*   /\* compare them *\/ */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  outf = scalar3d_get(outf_scalar3d, z, i, j, k); */
+/* 	  outr = scalar3d_get(outr_scalar3d, z, i, j, k); */
+/* 	  diff = (outf - outr)/outr; */
+/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, outf, outr, diff); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
 
   scalar2d_free(boundary_scalar2d);
   scalar2d_free(f_scalar2d);

@@ -177,7 +177,7 @@ double boundary(int z, double theta, double phi)
 /*********************************************/
 double field(int z, double xi, double theta, double phi)
 {
-  return xi*cos(theta)*(cos(2.0*phi) + sin(2.0*phi));
+  return xi*xi*cos(2.0*theta)*(cos(2.0*phi) + sin(2.0*phi));
 }
 
 /**************************************/
@@ -185,5 +185,5 @@ double field(int z, double xi, double theta, double phi)
 /**************************************/
 double d2field_dthetadxi(int z, double xi, double theta, double phi)
 {
-    return -sin(theta)*(cos(2.0*phi) + sin(2.0*phi));
+    return -4.0*xi*sin(2.0*theta)*(cos(2.0*phi) + sin(2.0*phi));
 }

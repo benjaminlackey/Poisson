@@ -165,17 +165,24 @@ void dividebyr(scalar3d *fbyr_grid, coeff *f_coeff, int xishift, int thetashift,
 void jacobian1(scalar3d *jacobian, gsl_vector *alphalist, scalar2d *f, scalar2d *g);
 void d2rdxi2(scalar3d *rxx, gsl_vector *alphalist, scalar2d *f, scalar2d *g);
 void dfdxi(coeff *dfdxi, coeff *f);
+void dfdxi_ongrid(scalar3d *df_dxi_scalar3d, scalar3d *f_scalar3d);
+void onebyr_df_dxi(scalar3d *onebyr_df_dxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void jacobian2(scalar3d *jacobian, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
 void dfdthetaprime(coeff *dfdt_coeff, coeff *f_coeff);
 void dividebysin(coeff *fbysin_coeff, coeff *f_coeff);
 void dividebysin_bound(bound_coeff *fbysin_bound_coeff, bound_coeff *f_bound_coeff);
 void jacobian3(scalar3d *jacobian, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
-void onebyrsin_d2rbydpdx(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
+void onebyrsintheta_d2r_dphidxi(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g);
 void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void onebyr_d2r_dthetadxi(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void onebyr_d2f_dthetadxi(scalar3d *onebyr_d2f_dthetadxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void r_xiplusb_a(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void dfdphiprime(coeff *dfdp_coeff, coeff *f_coeff);
 void laplace_ang(coeff *lapf_coeff, coeff *f_coeff);
+void laplace_ang_bound(bound_coeff *lapf_bound_coeff, bound_coeff *f_bound_coeff);
+void onebyrsq_anglaplacef(scalar3d *onebyrsq_anglaplacef_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void onebyrsq_anglaplacer(scalar3d *onebyrsq_anglaplacer_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void residual(scalar3d *remainder_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 
 /* calculate the gradient of a scalar */
 void gradient_r(scalar3d *gradf_r_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);

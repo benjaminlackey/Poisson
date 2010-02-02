@@ -1264,35 +1264,3 @@ void solve_ext(int L, gsl_matrix *A_ext_source, double alpha, gsl_vector *s_old,
 /*  { */
    
 /*  } */
- 
- 
- /***************************/
- /* out = 1 + J_2^2 + J_3^2 */
- /***************************/
- void one_plus_j2sq_plus_j3sq(scalar3d *j2_grid, scalar3d *j3_grid, scalar3d *out_grid)
- {
-   int z, i, j, k;
-  int nz, nr, nt, np;
-  double j2, j2sq, j3, j3sq;
-
-  nz = out_grid->nz;
-  nr = out_grid->nr;
-  nt = out_grid->nt;
-  np = out_grid->np;
-  
-  for ( z = 0; z < nz; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	for ( k = 0; k < np; k++ ) {
-	  j2 = scalar3d_get(j2_grid, z, i, j, k);
-	  j2sq = j2*j2;
-	  j3 = scalar3d_get(j3_grid, z, i, j, k);
-	  j3sq = j3*j3;
-	  scalar3d_set(out_grid, z, i, j, k, 1.0 + j2sq + j3sq);
-	}
-      }
-    }
-  }  
-}
-
-

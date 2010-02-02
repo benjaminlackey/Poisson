@@ -834,10 +834,10 @@ void dividebyr(scalar3d *fbyr_scalar3d, coeff *f_coeff, int xishift, int thetash
       }
     }
   }
-  print_bound_coeff(fbyxi_bound_coeff);
+  /* print_bound_coeff(fbyxi_bound_coeff); */
 
   fouriertogrid_bound(fbyxi_scalar2d, fbyxi_bound_coeff, thetashift);
-  print_scalar2d(fbyxi_scalar2d); 
+  /* print_scalar2d(fbyxi_scalar2d); */ 
 
   /* convert to values on grid: */
   /* fbyr_grid is still just f at grid points */
@@ -1634,11 +1634,50 @@ void jacobian3(scalar3d *jacobian, gsl_vector *alphalist, gsl_vector *betalist, 
   
 }
 
+void onebyrsintheta_d2f_dphidxi(scalar3d *onebyrsintheta_d2f_dphidxi_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int nz, nr, nt, np;
+  coeff *f_coeff;
+  coeff *df_dxi_coeff;
+  coeff *d2f_dphidxi_coeff;
+  coeff *onebysintheta_d2f_dphidxi_coeff;
+  
+  nz = f_scalar3d->nz;
+  nr = f_scalar3d->nr;
+  nt = f_scalar3d->nt;
+  np = f_scalar3d->np;
+
+  f_coeff = coeff_alloc(nz, nr, nt, np);
+  df_dxi_coeff = coeff_alloc(nz, nr, nt, np);
+  d2f_dphidxi_coeff = coeff_alloc(nz, nr, nt, np);
+  onebysintheta_d2f_dphidxi_coeff = coeff_alloc(nz, nr, nt, np);
+
+  /* evaluate coefficients of f */
+  gridtofourier(f_coeff, f_scalar3d, 0, 0);
+
+  /* df/dxi. xishift: 0->1 */
+  dfdxi(df_dxi_coeff, f_coeff);
+  
+  /* d/dphi (df/dxi) */
+  dfdphiprime(d2f_dphidxi_coeff, df_dxi_coeff);
+  
+  /* 1/sin(theta') d/dphi (df/dxi). xishift: 1->0, thetashift: 0->1 */
+  dividebysin(onebysintheta_d2f_dphidxi_coeff, d2f_dphidxi_coeff);
+
+  /* 1/(R*sin(theta')) d/dphi (df/dxi) */
+  dividebyr(onebyrsintheta_d2f_dphidxi_scalar3d, onebysintheta_d2f_dphidxi_coeff, 0, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+
+  coeff_free(f_coeff);
+  coeff_free(df_dxi_coeff);
+  coeff_free(d2f_dphidxi_coeff);
+  coeff_free(onebysintheta_d2f_dphidxi_coeff);
+}
+
 
 /**************************************************************/
 /* 1 / [R sin(theta)] * d^2 R(xi, theta, phi) / [d phi d xi]  */
 /**************************************************************/
-void onebyrsin_d2rbydpdx(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g)
+void onebyrsintheta_d2r_dphidxi(scalar3d *out_grid, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f, scalar2d *g)
 {
   int z, i, j, k;
   int nz, nr, nt, np, npc;
@@ -1777,16 +1816,16 @@ void onebyr_d2f_dthetadxi(scalar3d *onebyr_d2f_dthetadxi_scalar3d, scalar3d *f_s
 
   /* evaluate coefficients of f */
   gridtofourier(f_coeff, f_scalar3d, 0, 0);
-  printf("f_coeff is:\n");
-  print_coeff(f_coeff);
+/*   printf("f_coeff is:\n"); */
+/*   print_coeff(f_coeff); */
 
   /* df/dxi. xishift: 0->1 */
   dfdxi(df_dxi_coeff, f_coeff);
-  print_coeff(df_dxi_coeff);
+/*   print_coeff(df_dxi_coeff); */
 
   /* d/dtheta' (df/dxi) thetashift: 0->1*/
   dfdthetaprime(d2f_dthetadxi_coeff, df_dxi_coeff);
-  print_coeff(d2f_dthetadxi_coeff);
+/*   print_coeff(d2f_dthetadxi_coeff); */
 
   /* 1/R d/dtheta' (df/dxi) */
   dividebyr(onebyr_d2f_dthetadxi_scalar3d, d2f_dthetadxi_coeff, 1, 1, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
