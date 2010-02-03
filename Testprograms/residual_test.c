@@ -68,7 +68,7 @@ int main (void)
 
   /* calculate remainder from field */
   residual(residual_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-/*   print_scalar3d(residual_scalar3d); */
+  print_scalar3d(residual_scalar3d);
 
 /*   /\* evaluate the function R(xi, theta, phi *\/ */
 /*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
@@ -119,20 +119,20 @@ int main (void)
 /******************************/
 /* Function for the boundary. */
 /******************************/
-double boundary(int z, double theta, double phi)
-{
-  if(z==0)
-    return 1.0;
-  else
-    return 3.0;
-}
 /* double boundary(int z, double theta, double phi) */
 /* { */
 /*   if(z==0) */
-/*     return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/\* + 0.2*cos(5*theta)*\/); */
+/*     return 1.0; */
 /*   else */
-/*     return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/\* + 0.2*cos(5*theta)*\/); */
+/*     return 3.0; */
 /* } */
+double boundary(int z, double theta, double phi)
+{
+  if(z==0)
+    return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
+  else
+    return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
+}
 
 
 

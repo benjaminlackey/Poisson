@@ -107,7 +107,7 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
 	  onebyrsintheta_d2r_dphidxi_d = scalar3d_get(onebyrsintheta_d2r_dphidxi_scalar3d, z, i, j, k); /* 1/(R sin(theta)) * d^2R/(dphi dxi) */
 	  
 	  onebyrsq_anglaplacef_d = scalar3d_get(onebyrsq_anglaplacef_scalar3d, z, i, j, k); /* (1/R^2) * nabla_{theta phi}f */
-	  onebyrsq_anglaplacer_d = scalar3d_get(onebyrsq_anglaplacef_scalar3d, z, i, j, k); /* (1/R^2) * nabla_{theta phi}R */
+	  onebyrsq_anglaplacer_d = scalar3d_get(onebyrsq_anglaplacer_scalar3d, z, i, j, k); /* (1/R^2) * nabla_{theta phi}R */
 	  
 	  rby_xiplusbbya_sq = rby_xiplusbbya*rby_xiplusbbya;
 	  one_plus_j2sq_plus_j3sq = 1.0 + j2*j2 + j3*j3;
@@ -125,9 +125,11 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
 	  term3 = (term3a + term3b)/j1;
 	  
 	  scalar3d_set(residual_scalar3d, z, i, j, k, term1 + term2 + term3);
+	  /* printf("z=%d, i=%d, j=%d, k=%d, residual = %.18e\n", z, i, j, k, term1 + term2 + term3); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, term1=%.18e, term2=%.18e, term3a=%.18e, term3b=%.18e\n", z, i, j, k, term1, term2, term3a, term3b); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, r/(xi+b/a)=%.18e\n", z, i, j, k, rby_xiplusbbya); */
-	  printf("z=%d, i=%d, j=%d, k=%d, (1/R^2)anglapR=%.18e, d^2R/dxi^2=%.18e, (1/R)d^2R/dtdx=%.18e, (1/Rsint)d^2R/dpdx=%.18e\n", z, i, j, k, onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d);
+	  /* printf("z=%d, i=%d, j=%d, k=%d, (1/R^2)anglapR=%.18e, d^2R/dxi^2=%.18e, (1/R)d^2R/dtdx=%.18e, (1/Rsint)d^2R/dpdx=%.18e\n", z, i, j, k,
+	              onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d); */
 	}
       }
     }
@@ -240,7 +242,7 @@ void onebyrsq_anglaplacef(scalar3d *lapfbyr2_scalar3d, scalar3d *f_scalar3d, gsl
   /*>>>>>>>>>>> EVALUATE anglapF/xi^2 AT xi=R=0 <<<<<<<<<<<<<<*/
   
   /* Divide by xi^2 at xi = 0. */
-  /* Use l'Hopital's rule to take lim_{xi->0} lapf(xi)/xi^2. */
+  /* Use l'Hopital's rule twice to take lim_{xi->0} lapf(xi, theta, phi)/xi^2. */
   /* Only even Chebyshev polynomials contribute. */
   z = 0;
   for(imag=0; imag<=1; imag++) {
@@ -248,9 +250,9 @@ void onebyrsq_anglaplacef(scalar3d *lapfbyr2_scalar3d, scalar3d *f_scalar3d, gsl
       for(j=0; j < nt; j += 2) {
 	sum = 0.0;
 	for(i=nr-1; i>=0; i--) {
-	  sum += neg1toi(i+1)*4*i*i*coeff_get(f_coeff, z, i, j, k, imag);
+	  sum += neg1toi(i+1)*4*i*i*coeff_get(lapf_coeff, z, i, j, k, imag);
 	}
-	bound_coeff_set(lapfbyxi2_bound_coeff, z, j, k, imag, sum);
+	bound_coeff_set(lapfbyxi2_bound_coeff, z, j, k, imag, sum/2.0);
       }
     }
   }
@@ -276,7 +278,7 @@ void onebyrsq_anglaplacef(scalar3d *lapfbyr2_scalar3d, scalar3d *f_scalar3d, gsl
 	  if(z==0 && i==0) { /* R = 0 */
 	    alpha = gsl_vector_get(alpha_vector, z);
 	    scalar3d_set(lapfbyr2_scalar3d, z, i, j, k, 
-			 scalar2d_get(lapfbyxi2_scalar2d, z, j, k) / (2*alpha*alpha));
+			 scalar2d_get(lapfbyxi2_scalar2d, z, j, k) / (alpha*alpha));
 	  } else if (z==nz-1 && i==nr-1) { /* R = inf (U = 0) */
 	    scalar3d_set(lapfbyr2_scalar3d, z, i, j, k, 0.0);
 	  } else {
@@ -287,7 +289,7 @@ void onebyrsq_anglaplacef(scalar3d *lapfbyr2_scalar3d, scalar3d *f_scalar3d, gsl
 	}
       }
     }
-  }	    
+  }
   
   coeff_free(f_coeff);
   coeff_free(lapf_coeff);
@@ -332,8 +334,8 @@ void onebyrsq_anglaplacer(scalar3d *out_scalar3d, gsl_vector *alpha_vector, gsl_
   laplace_ang_bound(lapg_bound_coeff, g_bound_coeff);
   
   /* go back to gridpoints */
-  fouriertogrid_bound(lapf_scalar2d, f_bound_coeff, 0);
-  fouriertogrid_bound(lapg_scalar2d, g_bound_coeff, 0);
+  fouriertogrid_bound(lapf_scalar2d, lapf_bound_coeff, 0);
+  fouriertogrid_bound(lapg_scalar2d, lapg_bound_coeff, 0);
   
   /* kernel */
   z = 0;
