@@ -182,7 +182,8 @@ void laplace_ang(coeff *lapf_coeff, coeff *f_coeff);
 void laplace_ang_bound(bound_coeff *lapf_bound_coeff, bound_coeff *f_bound_coeff);
 void onebyrsq_anglaplacef(scalar3d *onebyrsq_anglaplacef_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 void onebyrsq_anglaplacer(scalar3d *onebyrsq_anglaplacer_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
-void residual(scalar3d *remainder_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *s_scalar3d, scalar3d *s_eff_jm1_scalar3d, scalar3d *s_eff_jm2_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
 
 /* calculate the gradient of a scalar */
 void gradient_r(scalar3d *gradf_r_scalar3d, scalar3d *f_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
@@ -242,6 +243,12 @@ void solve_radial_particular(int L, gsl_matrix ***radial_matrix, gsl_vector *alp
 void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gsl_matrix *particular_m, gsl_vector *homo_grow_v, gsl_vector *homo_decay_v);
 void homogeneoustochebyshev(ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_decay_ylm_coeff, gsl_vector *alpha_vector, gsl_vector *beta_vector, ylm_coeff *homogeneous_ylm_coeff);
 void solve_poisson_spherical(ylm_coeff *field_ylm_coeff, ylm_coeff *source_ylm_coeff, gsl_vector *alpha_v, gsl_vector *beta_v);
+
+/* combine all radial solutions */
+void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *s_scalar3d, scalar3d *s_eff_jm1_scalar3d, scalar3d *s_eff_jm2_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void evaluate_homogeneous(scalar3d *homo_scalar3d, ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_decay_ylm_coeff, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d);
+
 
 /* remap surface and function to new coordinate system */
 void findnewsurface(scalar2d *newsurface_scalar2d, scalar3d *enthalpy_scalar3d, gsl_vector *alphalist, gsl_vector *betalist, scalar2d *f_scalar2d, scalar2d *g_scalar2d);

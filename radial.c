@@ -7,6 +7,7 @@
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_blas.h>
 #include <gsl/gsl_linalg.h>
+#include <gsl/gsl_sf_legendre.h>
 
 /* fftw header */
 #include <fftw3.h>
@@ -86,8 +87,297 @@ void radial_matrix_free(int nz, int nt, gsl_matrix ***radial)
 
 
 
+/*******************************************************************/
+/* Effective source (including residual) for Poisson equation.     */
+/* Eq. 111 of Bonazzola, Gourgoulhon, Marck PRD 58, 104020 (1998). */
+/*******************************************************************/
+void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *s_scalar3d, scalar3d *s_eff_jm1_scalar3d, scalar3d *s_eff_jm2_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int z, i, j, k;
+  int nz, nr, nt, np;
+  
+  scalar3d *j1_scalar3d;
+  scalar3d *j2_scalar3d;
+  scalar3d *j3_scalar3d;
+  scalar3d *residual_scalar3d;
+  scalar3d *a_scalar3d;
+  gsl_vector *maxa_l_vector;
+
+  double j1, j2, j3;
+  double alpha, a, maxa_l;
+  double s, residual_d, s_eff_jm1, s_eff_jm2, s_eff;
+  
+  double lambda = 0.5; /* relaxation parameter */
+
+  nz = s_eff_scalar3d->nz;
+  nr = s_eff_scalar3d->nr;
+  nt = s_eff_scalar3d->nt;
+  np = s_eff_scalar3d->np;
+  
+  j1_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  j2_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  j3_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  residual_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  a_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  maxa_l_vector = gsl_vector_alloc(nz);
+
+  jacobian1(j1_scalar3d, alpha_vector, f_scalar2d, g_scalar2d);
+  jacobian2(j2_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  jacobian3(j3_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  residual(residual_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+/*   print_scalar3d(residual_scalar3d); */
+
+  /* evaluate a and maxa_l */
+  for ( z = 0; z < nz; z++ ) {
+    alpha = gsl_vector_get(alpha_vector, z);
+    maxa_l = 0.0;
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  j1 = scalar3d_get(j1_scalar3d, z, i, j, k);
+	  j2 = scalar3d_get(j2_scalar3d, z, i, j, k);
+	  j3 = scalar3d_get(j3_scalar3d, z, i, j, k);
+	  
+	  a = alpha*alpha * (1.0 + j2*j2 + j3*j3) / (j1*j1);
+	  scalar3d_set(a_scalar3d, z, i, j, k, a);
+	  maxa_l = MAX(a, maxa_l);
+	}
+      }
+    }
+    gsl_vector_set(maxa_l_vector, z, maxa_l);
+  }
+/*   print_scalar3d(a_scalar3d); */
+/*   print_vector(maxa_l_vector); */
+
+  /* set new effective source */
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  s = scalar3d_get(s_scalar3d, z, i, j, k);
+	  residual_d = scalar3d_get(residual_scalar3d, z, i, j, k);
+	  a = scalar3d_get(a_scalar3d, z, i, j, k);
+	  s_eff_jm1 = scalar3d_get(s_eff_jm1_scalar3d, z, i, j, k);
+	  s_eff_jm2 = scalar3d_get(s_eff_jm2_scalar3d, z, i, j, k);
+	  maxa_l = gsl_vector_get(maxa_l_vector, z);
+
+	  s_eff = ( s + residual_d + (maxa_l - a)*(lambda*s_eff_jm1 + (1.0 - lambda)*s_eff_jm2) ) / maxa_l;
+	  scalar3d_set(s_eff_scalar3d, z, i, j, k, s_eff);
+	}
+      }
+    }
+  }
+
+  scalar3d_free(j1_scalar3d);
+  scalar3d_free(j2_scalar3d);
+  scalar3d_free(j3_scalar3d);
+  scalar3d_free(residual_scalar3d);
+  scalar3d_free(a_scalar3d);
+  gsl_vector_free(maxa_l_vector);
+}
 
 
+/*******************************************************************/
+/* Evaluate homogeneous part of Poisson Eq. at an arbitrary point. */
+/*******************************************************************/
+void evaluate_homogeneous(scalar3d *homo_scalar3d, ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_decay_ylm_coeff, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int z, i, j, k;
+  int L, m, imag;
+  int nz, nr, nt, np;
+
+  scalar3d *r_scalar3d;
+  double roru_ijk;
+  double theta_j, x_j, phi_k;
+  double fhomo;
+  double phipart;
+  double ylm_jk;
+  double A_lm, B_lm;
+
+  nz = homo_scalar3d->nz;
+  nr = homo_scalar3d->nr;
+  nt = homo_scalar3d->nt;
+  np = homo_scalar3d->np;
+
+  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+
+  /* determine radius or 1/radius for each gridpoint */
+  rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  
+/*   print_ylm_coeff(homo_grow_ylm_coeff); */
+/*   print_ylm_coeff(homo_decay_ylm_coeff); */
+
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  roru_ijk = scalar3d_get(r_scalar3d, z, i, j, k);
+	  theta_j = PI*j/(nt-1); 
+	  x_j = cos(theta_j);
+	  phi_k = 2*PI*k/np;	
+	  
+	  /* begin sum over all spherical harmonics */	  
+	  fhomo = 0.0;
+	  for ( imag=0; imag<=1; imag++ ) {
+	    for ( m = imag; m < nt-imag; m++ ) {
+	      if(imag==0) {
+		phipart = cos(m*phi_k);
+	      } else {
+		phipart = sin(m*phi_k);
+	      }
+	      for ( L = m; L < nt-m%2; L++ ) {
+		A_lm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag);
+		B_lm = ylm_coeff_get(homo_decay_ylm_coeff, z, 0, L, m, imag);
+		ylm_jk = gsl_sf_legendre_sphPlm(L, m, x_j) * phipart;
+		if(z==0) { /* in kernel */
+		  fhomo += A_lm * pow(roru_ijk, L) * ylm_jk;
+		} else if(z==nz-1) { /* in external zone */
+		  fhomo += B_lm * pow(roru_ijk, (L+1)) * ylm_jk;		 
+		} else { /* in a shell */
+		  fhomo += (A_lm * pow(roru_ijk, L) + B_lm * pow(roru_ijk, -(L+1))) * ylm_jk;		 
+		}
+	      }
+	    }
+	  }
+	  scalar3d_set(homo_scalar3d, z, i, j, k, fhomo);
+
+	}
+      }
+    }
+  }
+  
+  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+}
+
+
+/*************************************************************************************************/
+/* Solve one iteration of the Poisson equation for a source evaluated at grid points. */
+/*************************************************************************************************/
+void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
+{
+  int z, i, j, k;
+  int L, m, imag;
+  int nz, nr, nt, np;
+
+  gsl_matrix ***radial_matrix;
+  gsl_matrix **fouriertoylm_matrix;
+  gsl_matrix **ylmtofourier_matrix;
+
+  coeff *source_coeff;
+  ylm_coeff *source_ylm_coeff;
+
+  gsl_matrix *source_matrix;
+  gsl_matrix *particular_matrix;
+  ylm_coeff *particular_ylm_coeff;
+  coeff *particular_coeff;
+  scalar3d *particular_scalar3d;
+
+  gsl_vector *homo_grow_vector;
+  gsl_vector *homo_decay_vector;
+  ylm_coeff *homo_grow_ylm_coeff;
+  ylm_coeff *homo_decay_ylm_coeff;
+  scalar3d *homo_scalar3d;
+
+  nz = field_scalar3d->nz;
+  nr = field_scalar3d->nr;
+  nt = field_scalar3d->nt;
+  np = field_scalar3d->np;
+  
+  /* allocate and make matrices for solving the radial poisson equation */
+  radial_matrix = radial_matrix_alloc(nz, nr, nt);
+  radial_matrix_set(nz, nt, alpha_vector, beta_vector, radial_matrix);
+  
+  /* allocate and make matrices for fourier <--> spherical harmonic transforms */
+  fouriertoylm_matrix = fouriertoylm_matrix_alloc(nt);
+  ylmtofourier_matrix = ylmtofourier_matrix_alloc(nt);
+  fouriertoylm_matrix_set(fouriertoylm_matrix);
+  ylmtofourier_matrix_set(ylmtofourier_matrix);
+  
+  /* allocate other things */
+  source_coeff = coeff_alloc(nz, nr, nt, np);
+  source_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
+  source_matrix = gsl_matrix_alloc(nz, nr);
+  particular_matrix = gsl_matrix_alloc(nz, nr);
+  particular_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
+  particular_coeff = coeff_alloc(nz, nr, nt, np);
+  particular_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  homo_grow_vector = gsl_vector_alloc(nz);
+  homo_decay_vector = gsl_vector_alloc(nz);
+  homo_grow_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
+  homo_decay_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
+  homo_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+
+  /* go to fourier series coefficients */
+  gridtofourier(source_coeff, s_eff_scalar3d, 0, 0);
+    
+  /* go from fourier series to spherical harmonics */
+  transform_fouriertoylm(source_coeff, source_ylm_coeff, fouriertoylm_matrix);
+
+  /*>>>>>>>>>>>>>>>> Solve particular and homogeneous parts of poisson equation. <<<<<<<<<<<<<<<<<<<<*/
+  /* Particular solution is returned as coefficients of a_iLm*T_i(xi)*Y_lm(theta, phi) basis.        */
+  /* Homogeneous solution is returned as coefficients of (A_Lm*r^L + B_Lm*r^(-L-1))*Y_lm(theta, phi) */
+  for ( imag=0; imag<=1; imag++ ) {
+    for ( m = imag; m < nt-imag; m++ ) {
+      for ( L = m; L < nt-m%2; L++ ) {
+	/* Solve particular part */
+	for ( z = 0; z < nz; z++ ) {
+	  for ( i = 0; i < nr; i++ ) {
+	    gsl_matrix_set(source_matrix, z, i, ylm_coeff_get(source_ylm_coeff, z, i, L, m, imag));
+	  }
+	}
+	gsl_matrix_set_zero(particular_matrix);
+	solve_radial_particular(L, radial_matrix, alpha_vector, beta_vector, source_matrix, particular_matrix);
+	for ( z = 0; z < nz; z++ ) {
+	  for ( i = 0; i < nr; i++ ) {
+	    ylm_coeff_set(particular_ylm_coeff, z, i, L, m, imag, gsl_matrix_get(particular_matrix, z, i));
+	  }
+	}
+	/* Solve homogeneous part */
+	solve_radial_homogeneous(L, alpha_vector, beta_vector, particular_matrix, homo_grow_vector, homo_decay_vector);
+	for ( z = 0; z < nz; z++ ) {
+	  ylm_coeff_set(homo_grow_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_grow_vector, z));
+	  ylm_coeff_set(homo_decay_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_decay_vector, z));
+	}
+      }
+    }
+  }
+  
+  /* evaluate particular solution on grid */
+  transform_ylmtofourier(particular_ylm_coeff, particular_coeff, ylmtofourier_matrix);
+  fouriertogrid(particular_scalar3d, particular_coeff, 0, 0);
+
+  /* evaluate homogeneous solution on grid */
+  evaluate_homogeneous(homo_scalar3d, homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+
+  /* field = particular + homogeneous */
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  scalar3d_set(field_scalar3d, z, i, j, k, 
+		       scalar3d_get(particular_scalar3d, z, i, j, k) + scalar3d_get(homo_scalar3d, z, i, j, k));
+	}
+      }
+    }
+  }  
+  
+  /* free memory */
+  radial_matrix_free(nz, nt, radial_matrix);
+  fouriertoylm_matrix_free(fouriertoylm_matrix);
+  ylmtofourier_matrix_free(ylmtofourier_matrix);
+  coeff_free(source_coeff);
+  ylm_coeff_free(source_ylm_coeff);
+  gsl_matrix_free(source_matrix);
+  gsl_matrix_free(particular_matrix);
+  ylm_coeff_free(particular_ylm_coeff);
+  coeff_free(particular_coeff);
+  scalar3d_free(particular_scalar3d);
+  gsl_vector_free(homo_grow_vector);
+  gsl_vector_free(homo_decay_vector);
+  ylm_coeff_free(homo_grow_ylm_coeff);
+  ylm_coeff_free(homo_decay_ylm_coeff);
+  scalar3d_free(homo_scalar3d);
+}
 
 
 /*************************************************************************************************/

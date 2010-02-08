@@ -80,7 +80,7 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
   onebyr_df_dxi(onebyr_df_dxi_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   d2rdxi2(d2r_dxi2_scalar3d, alpha_vector, f_scalar2d, g_scalar2d);
   onebyr_d2f_dthetadxi(onebyr_d2f_dthetadxi_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  onebyr_d2r_dthetadxi(onebyr_d2f_dthetadxi_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  onebyr_d2r_dthetadxi(onebyr_d2r_dthetadxi_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); /* you had used f instead of r */
   onebyrsintheta_d2f_dphidxi(onebyrsintheta_d2f_dphidxi_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   onebyrsintheta_d2r_dphidxi(onebyrsintheta_d2r_dphidxi_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   onebyrsq_anglaplacef(onebyrsq_anglaplacef_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);

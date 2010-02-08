@@ -1,4 +1,4 @@
-/* To compile type: gcc -I/opt/local/include -I/Users/lackey/Research/Poisson/ -L/opt/local/lib -lm -lfftw3 -lgsl -lgslcblas -Wall -pedantic -ansi -O2 -W /Users/lackey/Research/Poisson/print.c /Users/lackey/Research/Poisson/coefficients.c /Users/lackey/Research/Poisson/coordinatemap.c /Users/lackey/Research/Poisson/fourierylmconversions.c /Users/lackey/Research/Poisson/matrixoperators.c /Users/lackey/Research/Poisson/remainder.c /Users/lackey/Research/Poisson/poisson.h poissonsphericalboundtest.c */
+/* To compile type: gcc -I/opt/local/include -I/Users/lackey/Research/Poisson/ -L/opt/local/lib -lm -lfftw3 -lgsl -lgslcblas -Wall -pedantic -ansi -O2 -W /Users/lackey/Research/Poisson/print.c /Users/lackey/Research/Poisson/coefficients.c /Users/lackey/Research/Poisson/coordinatemap.c /Users/lackey/Research/Poisson/fourierylmconversions.c /Users/lackey/Research/Poisson/matrixoperators.c /Users/lackey/Research/Poisson/residual.c /Users/lackey/Research/Poisson/remap.c /Users/lackey/Research/Poisson/gradient.c /Users/lackey/Research/Poisson/radial.c /Users/lackey/Research/Poisson/poisson.h poissonsphericalboundtest.c */
 
 /* c headers */
 #include <stdio.h>
@@ -20,7 +20,8 @@
 
 double boundary(int z, int nt, int np, double theta, double phi);
 double source_func(int z, double r, double theta, double phi);
-void functiontogrid(scalar3d *func_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi));
+double field(int z, double r, double theta, double phi);
+
 
 int main (void)
 {
@@ -29,9 +30,9 @@ int main (void)
   
   int z, i, j, k;
   int nz = 5;
-  int nr = 25; /* must be odd? */
+  int nr = 15; /* must be odd? */
   int nt;
-  int np = 12; /* must be even */
+  int np = 16; /* must be even */
   double r_i, theta_j, phi_k;
   scalar2d *surface_scalar2d;
   scalar2d *f_scalar2d;
@@ -47,6 +48,8 @@ int main (void)
   ylm_coeff *source_ylm_coeff;
   gsl_matrix **fouriertoylm;
   gsl_matrix **ylmtofourier;
+
+  double s, num, anal, error;
   
   nt = np/2 + 1;
   
@@ -83,10 +86,10 @@ int main (void)
   
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(surface_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  print_vector(alpha_vector);
-  print_vector(beta_vector);
-  print_scalar2d(f_scalar2d);
-  print_scalar2d(g_scalar2d);
+/*   print_vector(alpha_vector); */
+/*   print_vector(beta_vector); */
+/*   print_scalar2d(f_scalar2d); */
+/*   print_scalar2d(g_scalar2d); */
 
   /* fill grid with data points determined by the function field */
   functiontogrid(source_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, source_func);
@@ -94,11 +97,11 @@ int main (void)
 
   /* rewrite function in terms of coefficients of Chebyshev polynomials and double Fourier series */
   gridtofourier(source_coeff, source_scalar3d, 0, 0);
-  print_coeff(source_coeff);
+  /* print_coeff(source_coeff); */
 
   /* go from fourier series to spherical harmonics */
   transform_fouriertoylm(source_coeff, source_ylm_coeff, fouriertoylm);
-  print_ylm_coeff(source_ylm_coeff);
+  /* print_ylm_coeff(source_ylm_coeff); */
 
   /* solve poisson equation and return coefficients */
   solve_poisson_spherical(field_ylm_coeff, source_ylm_coeff, alpha_vector, beta_vector);
@@ -111,32 +114,50 @@ int main (void)
   
   /* Find the radial position of each point. */
   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  
-  /* print to file the position and function value at all gridpoints */
-  fpgrid=fopen("fofrtp.txt", "w");
-  for ( z = 0; z < nz-1; z++ ) {
+
+  /* compare numerical to analytical solution */
+  for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
-	  r_i = scalar3d_get(r_scalar3d, z, i, j, k);
+	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
 	  theta_j = PI*j/(nt-1);
 	  phi_k = 2*PI*k/np;
-	  fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", r_i, theta_j, phi_k, scalar3d_get(field_scalar3d, z, i, j, k));
+	  s = scalar3d_get(field_scalar3d, z, i, j, k);
+ 	  num = scalar3d_get(field_scalar3d, z, i, j, k);
+ 	  anal = field(z, r_i, theta_j, phi_k);
+	  error = (num - anal)/anal;
+	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, num, anal, error);
 	}
       }
     }
   }
-  z=nz-1;
-  for ( i = 0; i < nr-1; i++ ) {
-    for ( j = 0; j < nt; j++ ) {
-      for ( k = 0; k < np; k++ ) {
-	r_i = 1.0 / scalar3d_get(r_scalar3d, z, i, j, k);
-	theta_j = PI*j/(nt-1);
-	phi_k = 2*PI*k/np;
-	fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", r_i, theta_j, phi_k, scalar3d_get(field_scalar3d, z, i, j, k));
-      }
-    }
-  }
+
+/*   /\* print to file the position and function value at all gridpoints *\/ */
+/*   fpgrid=fopen("fofrtp.txt", "w"); */
+/*   for ( z = 0; z < nz-1; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = scalar3d_get(r_scalar3d, z, i, j, k); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", r_i, theta_j, phi_k, scalar3d_get(field_scalar3d, z, i, j, k)); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+/*   z=nz-1; */
+/*   for ( i = 0; i < nr-1; i++ ) { */
+/*     for ( j = 0; j < nt; j++ ) { */
+/*       for ( k = 0; k < np; k++ ) { */
+/* 	r_i = 1.0 / scalar3d_get(r_scalar3d, z, i, j, k); */
+/* 	theta_j = PI*j/(nt-1); */
+/* 	phi_k = 2*PI*k/np; */
+/* 	fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", r_i, theta_j, phi_k, scalar3d_get(field_scalar3d, z, i, j, k)); */
+/*       } */
+/*     } */
+/*   } */
   
   return 0;
 }
@@ -192,18 +213,31 @@ double boundary(int nt, int np, int z, double theta, double phi)
 /*********************************************************/
 /* Some function of position in spherical coordinates.   */
 /*********************************************************/
+/* double source_func(int z, double r, double theta, double phi) */
+/* { */
+/*   int L = 9; */
+/*   double R = 5.0; */
+/*   if(z<3) */
+/*   else */
+/*     return 0.0; */
+/* } */
+
+/* double source_func(int z, double r, double theta, double phi) */
+/* { */
+/*   int L = 4; */
+/*   int m = 3; */
+
+/*   return pow(r, L)*gsl_sf_legendre_sphPlm(L, m, cos(theta))*cos(m*phi); */
+/* } */
+
 double source_func(int z, double r, double theta, double phi)
 {
-  int L = 5;
+  int L = 4;
+  int m = 3;
   double R = 5.0;
-  if(0==z)
-    return gsl_sf_legendre_sphPlm(L, 0, cos(theta))*0.5*(L+3)*(L+5)*((L-4)*r*r/pow(R, L+5) - (L-2)/pow(R, L+3));
-  if(1==z)
-    return gsl_sf_legendre_sphPlm(L, 0, cos(theta))*0.5*(L+3)*(L+5)*((L-4)*r*r/pow(R, L+5) - (L-2)/pow(R, L+3));
-  if(2==z)
-    return gsl_sf_legendre_sphPlm(L, 0, cos(theta))*0.5*(L+3)*(L+5)*((L-4)*r*r/pow(R, L+5) - (L-2)/pow(R, L+3));
-  if(3==z)
-    return 0.0;
+  if(z<3)
+    return pow(r, L)*((2*L+3)*(2*L+5)/pow(R, 2*L+3) - (4*L+10)*(2*L+3)*r*r/pow(R, 2*L+5))
+      *gsl_sf_legendre_sphPlm(L, m, cos(theta))*cos(m*phi);
   else
     return 0.0;
 }
@@ -219,67 +253,24 @@ double source_func(int z, double r, double theta, double phi)
 /*     return pow(R, 5)/pow(r, 4); */
 /* } */
 
+/* double field(int z, double r, double theta, double phi) */
+/* { */
+/*   int L = 9; */
+/*   double R = 5.0; */
+/*   if(z<3) */
+/*     return gsl_sf_legendre_sphPlm(L, 0, cos(theta))*((L+5)*r*r/(2.0*pow(R, L+3)) - (L+3)*pow(r, 4)/(2.0*pow(R, L+5))); */
+/*   else */
+/*     return gsl_sf_legendre_sphPlm(L, 0, cos(theta))/pow(r, L+1); */
+/* } */
 
-/******************************************************************************************************/
-/* Take a function f = f(z, r, theta, phi) and evaluate it on the surface matched grid func_scalar3d. */
-/******************************************************************************************************/ 
-void functiontogrid(scalar3d *func_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi))
+double field(int z, double r, double theta, double phi)
 {
-  int z, i, j, k;
-  int nz, nr, nt, np;
-  double xi_i, theta_j, phi_k;
-  double r;
-  scalar3d *r_scalar3d;
-
-  nz = func_scalar3d->nz;
-  nr = func_scalar3d->nr;
-  nt = func_scalar3d->nt;
-  np = func_scalar3d->np;
-  
-  /* value of R (or U) at each point (xi, theta, phi) on grid */
-  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);  
-  
-  /* Find the radial position of each point. */
-  rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-
-  /* kernel and shells */
-  for ( z = 0; z < nz-1; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	for ( k = 0; k < np; k++ ) {
-	  if(z==0)
-	    xi_i = sin(PI*i/(2*(nr-1)));
-	  else
-	    xi_i = -cos(PI*i/(nr-1));
-	  theta_j = PI*j/(nt-1);
-	  phi_k = 2*PI*k/np;
-	  r = scalar3d_get(r_scalar3d, z, i, j, k);
-	  scalar3d_set(func_scalar3d, z, i, j, k, func(z, r, theta_j, phi_k));
-	}
-      }
-    }
-  }
-  /* external domain except for r = infinity */
-  z=nz-1;
-  for ( i = 0; i < nr-1; i++ ) {
-    for ( j = 0; j < nt; j++ ) {
-      for ( k = 0; k < np; k++ ) {
-	xi_i = -cos(PI*i/(nr-1));
-	theta_j = PI*j/(nt-1);
-	phi_k = 2*PI*k/np;
-	r = scalar3d_get(r_scalar3d, z, i, j, k);
-	scalar3d_set(func_scalar3d, z, i, j, k, func(z, 1/r, theta_j, phi_k));
-      }
-    }
-  }
-  /* set to zero at r = infinity */
-  z=nz-1;
-  i=nr-1;
-  for ( j = 0; j < nt; j++ ) {
-    for ( k = 0; k < np; k++ ) {
-      scalar3d_set(func_scalar3d, z, i, j, k, 0.0);
-    }
-  }
-
-  scalar3d_free(r_scalar3d);
+  int L = 4;
+  int m = 3;
+  double R = 5.0;
+  if(z<3)
+    return pow(r, L)*(0.5*(2*L+5)*r*r/pow(R, 2*L+3) - 0.5*(2*L+3)*pow(r, 4)/pow(R, 2*L+5))
+      *gsl_sf_legendre_sphPlm(L, m, cos(theta))*cos(m*phi);
+  else
+    return (1.0/pow(r, L+1))*gsl_sf_legendre_sphPlm(L, m, cos(theta))*cos(m*phi);
 }
