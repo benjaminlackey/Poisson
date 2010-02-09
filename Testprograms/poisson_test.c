@@ -87,7 +87,7 @@ int main (void)
       }
     }
   }
-  for ( iteration = 0; iteration < 5; iteration++ ) {
+  for ( iteration = 0; iteration < 20; iteration++ ) {
     printf("iteration %d:\n", iteration);
 
     /* create the effective source from the actual source, current value of field, and old effective sources */
@@ -158,7 +158,7 @@ double boundary(int z, double theta, double phi)
   int m1 = 1;
 
   if(z==0)
-    return 5.0/**(1.0 + 0.2*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)))*/;
+    return 5.0*(1.0 + 0.5*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)));
   else if(z==1)
     return 10.0;
   else

@@ -123,7 +123,7 @@ int main (void)
 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
 	  theta_j = PI*j/(nt-1);
 	  phi_k = 2*PI*k/np;
-	  s = scalar3d_get(field_scalar3d, z, i, j, k);
+	  s = scalar3d_get(source_scalar3d, z, i, j, k);
  	  num = scalar3d_get(field_scalar3d, z, i, j, k);
  	  anal = field(z, r_i, theta_j, phi_k);
 	  error = (num - anal)/anal;

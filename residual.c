@@ -265,7 +265,7 @@ void onebyrsq_anglaplacef(scalar3d *lapfbyr2_scalar3d, scalar3d *f_scalar3d, gsl
   
   /* convert to values on grid: */
   /* lapfbyr2_grid is still just lapf at grid points */
-  fouriertogrid(lapfbyr2_scalar3d, f_coeff, 0, 0);
+  fouriertogrid(lapfbyr2_scalar3d, lapf_coeff, 0, 0);
   
   /* determine radius of each gridpoint */
   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);

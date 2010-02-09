@@ -1,9 +1,9 @@
 /*********************************************************************************
- * Test the laprace_ang_bound function                                           *
+ * Test the laplace_ang_bound function                                           *
  * Author: Benjamin D. Lackey                                                    *
  *********************************************************************************/
 
-/* To compile type: gcc -I/opt/local/include -I/Users/lackey/Research/Poisson/ -L/opt/local/lib -lm -lfftw3 -lgsl -lgslcblas -Wall -pedantic -ansi -O2 -W /Users/lackey/Research/Poisson/print.c /Users/lackey/Research/Poisson/coefficients.c /Users/lackey/Research/Poisson/coordinatemap.c /Users/lackey/Research/Poisson/fourierylmconversions.c /Users/lackey/Research/Poisson/matrixoperators.c /Users/lackey/Research/Poisson/radial.c /Users/lackey/Research/Poisson/remap.c /Users/lackey/Research/Poisson/gradient.c /Users/lackey/Research/Poisson/poisson.h /Users/lackey/Research/Poisson/residual.c anglaplace_bound_test.c */
+/* To compile type: gcc -I/opt/local/include -I/Users/lackey/Research/Poisson/ -L/opt/local/lib -lm -lfftw3 -lgsl -lgslcblas -Wall -pedantic -ansi -O2 -W /Users/lackey/Research/Poisson/print.c /Users/lackey/Research/Poisson/coefficients.c /Users/lackey/Research/Poisson/coordinatemap.c /Users/lackey/Research/Poisson/fourierylmconversions.c /Users/lackey/Research/Poisson/matrixoperators.c /Users/lackey/Research/Poisson/radial.c /Users/lackey/Research/Poisson/remap.c /Users/lackey/Research/Poisson/gradient.c /Users/lackey/Research/Poisson/poisson.h /Users/lackey/Research/Poisson/residual.c ang_lap_bound_test.c */
 
 /* c headers */
 #include <stdio.h>
@@ -82,20 +82,16 @@ int main (void)
 
 double boundary(int z, double theta, double phi)
 {
-  double x;
-  int l = 5;
-  int m = 3;
+  int l = 2;
+  int m = 1;
   
-  x = cos(theta);
-  return gsl_sf_legendre_sphPlm(l, m, x)*(cos(m*phi) + sin(m*phi));
+  return gsl_sf_legendre_sphPlm(l, m, cos(theta))*(cos(m*phi) + sin(m*phi));
 }
 
 double lap_boundary(int z, double theta, double phi)
 {
-  double x;
-  int l = 5;
-  int m = 3;
+  int l = 2;
+  int m = 1;
   
-  x = cos(theta);
-  return -l*(l+1.0)*gsl_sf_legendre_sphPlm(l, m, x)*(cos(m*phi) + sin(m*phi));
+  return -l*(l+1.0)*gsl_sf_legendre_sphPlm(l, m, cos(theta))*(cos(m*phi) + sin(m*phi));
 }
