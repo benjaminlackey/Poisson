@@ -32,7 +32,7 @@ double field(int z, double r, double theta, double phi);
 int main (void)
 {
   int z, i, j, k;
-  int nz = 4;
+  int nz = 5;
   int nr = 35; /* must be odd? */
   int nt;
   int np = 24; /* must be even */
@@ -72,8 +72,11 @@ int main (void)
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(boundary_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   
-  /* evaluate field at gridpoints */
+  /* evaluate source at gridpoints */
   functiontogrid(source_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, source);
+
+/*   /\* evaluate analytical solution at gridpoints *\/ */
+/*   functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, field); */
 
   /* set initial values for f, s_eff^{j-2}, and s_eff^{j-1} */
   for ( z = 0; z < nz; z++ ) {
@@ -87,7 +90,7 @@ int main (void)
       }
     }
   }
-  for ( iteration = 0; iteration < 20; iteration++ ) {
+  for ( iteration = 0; iteration < 1; iteration++ ) {
     printf("iteration %d:\n", iteration);
 
     /* create the effective source from the actual source, current value of field, and old effective sources */
@@ -158,8 +161,10 @@ double boundary(int z, double theta, double phi)
   int m1 = 1;
 
   if(z==0)
-    return 5.0*(1.0 + 0.5*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)));
+    return 1.0;
   else if(z==1)
+    return 5.0*(1.0 + 0.1*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)));
+  else if(z==2)
     return 10.0;
   else
     return 20.0;
@@ -172,7 +177,7 @@ double boundary(int z, double theta, double phi)
 double source(int z, double r, double theta, double phi)
 {
   double R = 10.0;
-  if(z<2)
+  if(z<3)
     return (R - r*r/R);
   else
     return pow(R, 5)/pow(r, 4);
@@ -201,7 +206,7 @@ double source(int z, double r, double theta, double phi)
 double field(int z, double r, double theta, double phi)
 {
   double R = 10.0;
-  if(z<2)
+  if(z<3)
     return R*r*r/6.0 - pow(r, 4)/(20.0*R) - 3.0*pow(R, 3)/4.0;
   else
     return pow(R, 5)/(2.0*r*r) - 17.0*pow(R, 4)/(15.0*r);

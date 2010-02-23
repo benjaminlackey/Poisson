@@ -125,7 +125,7 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
   jacobian2(j2_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   jacobian3(j3_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   residual(residual_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  print_scalar3d(residual_scalar3d);
+  /*print_scalar3d(residual_scalar3d);*/
 
   /* evaluate a and maxa_l */
   for ( z = 0; z < nz; z++ ) {

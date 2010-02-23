@@ -59,9 +59,9 @@ int main (void)
 {
   int z, i, j, k;
   int nz = 3;
-  int nr = 35; /* must be odd? */
+  int nr = 65; /* must be odd? */
   int nt;
-  int np = 30; /* must be even */
+  int np = 50; /* must be even */
   double r_i, theta_j, phi_k;
   scalar2d *boundary_scalar2d;
   scalar2d *f_scalar2d;
@@ -93,7 +93,7 @@ int main (void)
   /* evaluate boundary function on gridpoints */
   boundarytogrid(boundary_scalar2d, boundary);
   /*randomboundary(boundary_scalar2d);*/
-  print_scalar2d(boundary_scalar2d);
+ /*  print_scalar2d(boundary_scalar2d); */
   
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(boundary_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
@@ -112,7 +112,7 @@ int main (void)
 
 /*   /\* Find the radial position of each point. *\/ */
 /*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
-/*   print_scalar3d(r_scalar3d); */
+/*   /\*print_scalar3d(r_scalar3d);*\/ */
 /*   /\* compare numerical to analytic values of the gradient at the surface matched gridpoints *\/ */
 /*   printf("GRAD_R AT SURFACE MATCHED GRIDPOINTS:\n"); */
 /*   for ( z = 0; z < nz; z++ ) { */
@@ -134,70 +134,70 @@ int main (void)
   
   /*>>>>>>>>>>>>>>>>>> TESTING GRAD_THETA <<<<<<<<<<<<<<<<<<*/
   
-/*   /\* evaluate field at surface matched gridpoints *\/ */
-/*   functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, fieldfortheta); */
-/* /\*   print_scalar3d(field_scalar3d); *\/ */
-
-/*   /\* calculate radial gradient *\/ */
-/*   gradient_theta(gradf_theta_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
-  
-/*   /\* Find the radial position of each point. *\/ */
-/*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
-/*   /\*print_scalar3d(r_scalar3d);*\/ */
-/*   /\* compare numerical to analytic values of the gradient at the surface matched gridpoints *\/ */
-/*   printf("GRAD_THETA AT SURFACE MATCHED GRIDPOINTS:\n"); */
-/*   for ( z = 0; z < nz; z++ ) { */
-/*     for ( i = 0; i < nr; i++ ) { */
-/*       for ( j = 0; j < nt; j++ ) { */
-/* 	for ( k = 0; k < np; k++ ) { */
-/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
-/* 	  theta_j = PI*j/(nt-1); */
-/* 	  phi_k = 2*PI*k/np; */
-/* 	  grad = scalar3d_get(gradf_theta_scalar3d, z, i, j, k); */
-/* 	  grad_analytic = gradfield_theta(z, r_i, theta_j, phi_k); */
-/* 	  error = (grad - grad_analytic)/(grad); */
-/* 	  /\*error = MIN(ABS((grad - grad_analytic)/grad_analytic), ABS((grad - grad_analytic)/(grad + grad_analytic+1.0e-15)));*\/ */
-/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, grad, grad_analytic, error); */
-/* 	} */
-/*       } */
-/*     } */
-/*   } */
- 
-
-  /*>>>>>>>>>>>>>>>>>> TESTING GRAD_PHI <<<<<<<<<<<<<<<<<<*/
-  
   /* evaluate field at surface matched gridpoints */
-  functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, fieldforphi);
-  
+  functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, fieldfortheta);
+/*   print_scalar3d(field_scalar3d); */
+
   /* calculate radial gradient */
-  gradient_phi(gradf_phi_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  gradient_theta(gradf_theta_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   
   /* Find the radial position of each point. */
   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-
+  /*print_scalar3d(r_scalar3d);*/
   /* compare numerical to analytic values of the gradient at the surface matched gridpoints */
-  printf("GRAD_PHI AT SURFACE MATCHED GRIDPOINTS:\n");
-  max = 0.0;
+  printf("GRAD_THETA AT SURFACE MATCHED GRIDPOINTS:\n");
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
-	printf("-----------------------------------------\n");
 	for ( k = 0; k < np; k++ ) {
 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
 	  theta_j = PI*j/(nt-1);
 	  phi_k = 2*PI*k/np;
-	  grad = scalar3d_get(gradf_phi_scalar3d, z, i, j, k);
-	  grad_analytic = gradfield_phi(z, r_i, theta_j, phi_k);
+	  grad = scalar3d_get(gradf_theta_scalar3d, z, i, j, k);
+	  grad_analytic = gradfield_theta(z, r_i, theta_j, phi_k);
 	  error = (grad - grad_analytic)/(grad);
 	  /*error = MIN(ABS((grad - grad_analytic)/grad_analytic), ABS((grad - grad_analytic)/(grad + grad_analytic+1.0e-15)));*/
 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, grad, grad_analytic, error);
-	  if((z == nz-1)&&(i<nr-1)&&(ABS(error)<1.0e-3))
-	    max = MAX(error, max);
 	}
       }
     }
   }
-  printf("Max error in external zone = %.18e\n", max);
+ 
+
+  /*>>>>>>>>>>>>>>>>>> TESTING GRAD_PHI <<<<<<<<<<<<<<<<<<*/
+  
+/*   /\* evaluate field at surface matched gridpoints *\/ */
+/*   functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, fieldforphi); */
+  
+/*   /\* calculate radial gradient *\/ */
+/*   gradient_phi(gradf_phi_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+  
+/*   /\* Find the radial position of each point. *\/ */
+/*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+
+/*   /\* compare numerical to analytic values of the gradient at the surface matched gridpoints *\/ */
+/*   printf("GRAD_PHI AT SURFACE MATCHED GRIDPOINTS:\n"); */
+/*   max = 0.0; */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	printf("-----------------------------------------\n"); */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  grad = scalar3d_get(gradf_phi_scalar3d, z, i, j, k); */
+/* 	  grad_analytic = gradfield_phi(z, r_i, theta_j, phi_k); */
+/* 	  error = (grad - grad_analytic)/(grad); */
+/* 	  /\*error = MIN(ABS((grad - grad_analytic)/grad_analytic), ABS((grad - grad_analytic)/(grad + grad_analytic+1.0e-15)));*\/ */
+/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, grad, grad_analytic, error); */
+/* 	  if((z == nz-1)&&(i<nr-1)&&(ABS(error)<1.0e-3)) */
+/* 	    max = MAX(error, max); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+/*   printf("Max error in external zone = %.18e\n", max); */
 
   /*errorlist(gradf_phi_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, gradfield_phi);*/
 
@@ -216,101 +216,101 @@ int main (void)
 }
 
 
-void randomboundary(scalar2d *boundary_scalar2d)
-{
-  int z, j, k;
-  int nz, nt, np;
-  double bound;
+/* void randomboundary(scalar2d *boundary_scalar2d) */
+/* { */
+/*   int z, j, k; */
+/*   int nz, nt, np; */
+/*   double bound; */
   
-  nz = boundary_scalar2d->nz; /* Here, nz is number of boundaries not zones. */
-  nt = boundary_scalar2d->nt;
-  np = boundary_scalar2d->np;
+/*   nz = boundary_scalar2d->nz; /\* Here, nz is number of boundaries not zones. *\/ */
+/*   nt = boundary_scalar2d->nt; */
+/*   np = boundary_scalar2d->np; */
 
-  srand(3); /* seed for random number generator rand() */
+/*   srand(3); /\* seed for random number generator rand() *\/ */
 
-  for ( z = 0; z < nz; z++ ) {
-    /* all points on N pole must be same */
-    j = 0;
-    bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5);
-    for ( k = 0; k < np; k++ )
-      scalar2d_set(boundary_scalar2d, z, j, k, bound);
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     /\* all points on N pole must be same *\/ */
+/*     j = 0; */
+/*     bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5); */
+/*     for ( k = 0; k < np; k++ ) */
+/*       scalar2d_set(boundary_scalar2d, z, j, k, bound); */
     
-    for ( j = 1; j < nt-1; j++ ) {
-      for ( k = 0; k < np; k++ ) {
-	bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5);
-	scalar2d_set(boundary_scalar2d, z, j, k, bound);
-      }
-    }
+/*     for ( j = 1; j < nt-1; j++ ) { */
+/*       for ( k = 0; k < np; k++ ) { */
+/* 	bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5); */
+/* 	scalar2d_set(boundary_scalar2d, z, j, k, bound); */
+/*       } */
+/*     } */
     
-    j = nt-1;
-    bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5);
-    for ( k = 0; k < np; k++ )
-      scalar2d_set(boundary_scalar2d, z, j, k, bound);
-  }
-}
+/*     j = nt-1; */
+/*     bound = 5.0*(z+1) + 0.3*((double)rand()/(double)RAND_MAX - 0.5); */
+/*     for ( k = 0; k < np; k++ ) */
+/*       scalar2d_set(boundary_scalar2d, z, j, k, bound); */
+/*   } */
+/* } */
 
 
-void errorlist(scalar3d *f_num_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi))
-{
-  int z, i, j, k;
-  int nz, nr, nt, np;
-  scalar3d *r_scalar3d;
-  double r_i, theta_j, phi_k;
-  double f_anal, f_num, f_max;
-  int p;
-  double error, pnorm;
+/* void errorlist(scalar3d *f_num_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d, double (*func)(int z, double r, double theta, double phi)) */
+/* { */
+/*   int z, i, j, k; */
+/*   int nz, nr, nt, np; */
+/*   scalar3d *r_scalar3d; */
+/*   double r_i, theta_j, phi_k; */
+/*   double f_anal, f_num, f_max; */
+/*   int p; */
+/*   double error, pnorm; */
   
-  nz = f_num_scalar3d->nz;
-  nr = f_num_scalar3d->nr;
-  nt = f_num_scalar3d->nt;
-  np = f_num_scalar3d->np;
+/*   nz = f_num_scalar3d->nz; */
+/*   nr = f_num_scalar3d->nr; */
+/*   nt = f_num_scalar3d->nt; */
+/*   np = f_num_scalar3d->np; */
   
-  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+/*   r_scalar3d = scalar3d_alloc(nz, nr, nt, np); */
   
-  /* Find the radial position of each point. */
-  rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+/*   /\* Find the radial position of each point. *\/ */
+/*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
   
-  /* Find max value of f */
-  f_max = 0.0;
-  for ( z = 0; z < nz; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	for ( k = 0; k < np; k++ ) {
-	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
-	  theta_j = PI*j/(nt-1);
-	  phi_k = 2*PI*k/np;
-	  f_anal = func(z, r_i, theta_j, phi_k);
-	  f_max = MAX(f_anal, f_max);
-	}
-      }
-    }
-  }
+/*   /\* Find max value of f *\/ */
+/*   f_max = 0.0; */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  f_anal = func(z, r_i, theta_j, phi_k); */
+/* 	  f_max = MAX(f_anal, f_max); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
 
-  /* List the error and find the p-norm */
-  p = 1;
-  pnorm = 0.0;
-  for ( z = 0; z < nz; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	printf("-----------------------------------------\n");
-	for ( k = 0; k < np; k++ ) {
-	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k));
-	  theta_j = PI*j/(nt-1);
-	  phi_k = 2*PI*k/np;
-	  f_num = scalar3d_get(f_num_scalar3d, z, i, j, k);
-	  f_anal = func(z, r_i, theta_j, phi_k);
-	  error = MIN( ABS((f_num - f_anal)/f_anal), ABS(f_num/f_max) );
-	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, f_num, f_anal, error);
-	  pnorm += pow(ABS(error), p); 
-	}
-      }
-    }
-  }
-  pnorm = pow(pnorm, 1.0/p) / (nz*nr*nt*np);
-  printf("%d-norm = %.18e\n", p, pnorm);
+/*   /\* List the error and find the p-norm *\/ */
+/*   p = 1; */
+/*   pnorm = 0.0; */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	printf("-----------------------------------------\n"); */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  f_num = scalar3d_get(f_num_scalar3d, z, i, j, k); */
+/* 	  f_anal = func(z, r_i, theta_j, phi_k); */
+/* 	  error = MIN( ABS((f_num - f_anal)/f_anal), ABS(f_num/f_max) ); */
+/* 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, f_num, f_anal, error); */
+/* 	  pnorm += pow(ABS(error), p);  */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+/*   pnorm = pow(pnorm, 1.0/p) / (nz*nr*nt*np); */
+/*   printf("%d-norm = %.18e\n", p, pnorm); */
 
-  scalar3d_free(r_scalar3d);
-}
+/*   scalar3d_free(r_scalar3d); */
+/* } */
 
 /******************************/
 /* Function for the boundary. */
@@ -322,12 +322,33 @@ void errorlist(scalar3d *f_num_scalar3d, gsl_vector *alpha_vector, gsl_vector *b
 /*   else */
 /*     return 5.0; */
 /* } */
+/* double boundary(int z, double theta, double phi) */
+/* { */
+/*   if(z==0) */
+/*     return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/\* + 0.2*cos(5*theta)*\/); */
+/*   else */
+/*     return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/\* + 0.2*cos(5*theta)*\/); */
+/* } */
 double boundary(int z, double theta, double phi)
 {
-  if(z==0)
-    return 1.0*(1.0 + 0.3*sin(theta)*(cos(phi)+sin(phi)) + 0.2*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
-  else
-    return 5.0*(1.0 - 0.2*sin(theta)*(cos(phi)+sin(phi)) + 0.1*(1-cos(2*theta))*(cos(2*phi)+sin(2*phi))/* + 0.2*cos(5*theta)*/);
+  double a;
+  double b;
+  double c;
+  double den;
+
+  if(z==0) {
+    a = 5.0;
+    b = 6.0;
+    c = 7.0;
+    den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2);
+    return pow(den, -0.5);
+  } else {
+    a = 10.0;
+    b = 8.0;
+    c = 12.0;
+    den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2);
+    return pow(den, -0.5);
+  }
 }
 
 
@@ -336,23 +357,54 @@ double boundary(int z, double theta, double phi)
 /*********************************************/
 /* Some function in spherical coordinates.   */
 /*********************************************/
+/* double fieldforr(int z, double r, double theta, double phi) */
+/* { */
+/*   if(z<2) */
+/*     return cos(0.2*r); */
+/*   else */
+/*     return 1.0/(r*r); */
+/* } */
 double fieldforr(int z, double r, double theta, double phi)
 {
-  if(z<2)
-    return cos(0.2*r);
-  else
-    return 1.0/(r*r);
+  int L1 = 1;
+  int m1 = 0;
+  int L2 = 4;
+  int m2 = 3;
+
+  if(z<2) /* r^L1 * cos(r) * Y_L1^m1 + ...*/
+    return cos(r)
+      + pow(r, L1)*cos(r)*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + pow(r, L2)*cos(r)*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
+  else /* (1/r)^{L1+1} * Y_L1^m1 + ...*/
+    return (1.0/pow(r, L1+1))*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + (1.0/pow(r, L2+1))*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
 }
+
 
 /**************************************/
 /* The corresponding radial gradient. */
 /**************************************/
+/* double gradfield_r(int z, double r, double theta, double phi) */
+/* { */
+/*   if(z<2) */
+/*     return -0.2*sin(0.2*r); */
+/*   else */
+/*     return -2.0/(r*r*r); */
+/* } */
 double gradfield_r(int z, double r, double theta, double phi)
 {
-  if(z<2)
-    return -0.2*sin(0.2*r);
-  else
-    return -2.0/(r*r*r);
+  int L1 = 1;
+  int m1 = 0;
+  int L2 = 4;
+  int m2 = 3;
+
+  if(z<2) /* r^L1 * cos(r) * Y_L1^m1 + ...*/
+    return -sin(r)
+      + (L1*pow(r, L1-1)*cos(r) - pow(r, L1)*sin(r))*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + (L2*pow(r, L2-1)*cos(r) - pow(r, L2)*sin(r))*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
+  else /* (1/r)^{L1+1} * Y_L1^m1 + ...*/
+    return (-L1-1)*(1.0/pow(r, L1+2))*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + (-L2-1)*(1.0/pow(r, L2+2))*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
 }
 
 /*>>>>>>>>>>>>> THETA <<<<<<<<<<<<<<*/
@@ -363,7 +415,10 @@ double gradfield_r(int z, double r, double theta, double phi)
 double fieldfortheta(int z, double r, double theta, double phi)
 {
   if(z<2)
-    return r*cos(theta);
+    return 3.0 
+      + r*cos(r)*cos(theta) 
+      + r*cos(r)*sin(theta)*(cos(phi) + sin(phi))
+      + r*r*cos(r)*sin(theta)*sin(theta)*(cos(2*phi) + sin(2*phi));
   else
     return cos(theta)/r;
 }
@@ -374,7 +429,10 @@ double fieldfortheta(int z, double r, double theta, double phi)
 double gradfield_theta(int z, double r, double theta, double phi)
 {
   if(z<2)
-    return -sin(theta);
+    return 0.0
+      - cos(r)*sin(theta) 
+      + cos(r)*cos(theta)*(cos(phi) + sin(phi))
+      + r*cos(r)*2*sin(theta)*cos(theta)*(cos(2*phi) + sin(2*phi));
   else
     return -sin(theta)/(r*r);
 }
