@@ -50,7 +50,7 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
   
   double rby_xiplusbbya_sq;
   double one_plus_j2sq_plus_j3sq;
-  double term1, term2, term3a, term3b, term3;
+  double term1, term2, term3a, term3b, term3, res;
   
   nz = f_scalar3d->nz;
   nr = f_scalar3d->nr;
@@ -124,12 +124,17 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
 	  
 	  term3 = (term3a + term3b)/j1;
 	  
-	  scalar3d_set(residual_scalar3d, z, i, j, k, term1 + term2 + term3);
+	  if(z==nz-1)
+	    res = term2 + term3;
+	  else
+	    res = term1 + term2 + term3;
+	  
+	  scalar3d_set(residual_scalar3d, z, i, j, k, res);
 	  /* printf("z=%d, i=%d, j=%d, k=%d, residual = %.18e\n", z, i, j, k, term1 + term2 + term3); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, term1=%.18e, term2=%.18e, term3a=%.18e, term3b=%.18e\n", z, i, j, k, term1, term2, term3a, term3b); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, r/(xi+b/a)=%.18e\n", z, i, j, k, rby_xiplusbbya); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, (1/R^2)anglapR=%.18e, d^2R/dxi^2=%.18e, (1/R)d^2R/dtdx=%.18e, (1/Rsint)d^2R/dpdx=%.18e\n", z, i, j, k,
-	              onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d); */
+	     onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d); */
 	}
       }
     }
