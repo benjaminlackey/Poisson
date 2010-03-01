@@ -72,7 +72,6 @@ int main (void)
   /* calculate remainder from field */
   residual(residual_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
  
-  /* compare numerical to analytic values of d^2f/(dtheta' dxi) */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {

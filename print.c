@@ -172,7 +172,7 @@ void print_coeff(coeff *c){
       for(j=0; j<nt; j++) {
 		printf("j = %d: ", j);
 		for(k=0; k<npc; k++){
-		  printf("(%.4e, %.4e)  ", coeff_get(c, z, i, j, k, REAL), coeff_get(c, z, i, j, k, IMAG));
+		  printf("(%.16e, %.16e)  ", coeff_get(c, z, i, j, k, REAL), coeff_get(c, z, i, j, k, IMAG));
 		}
 		printf("\n");
       }

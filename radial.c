@@ -177,77 +177,207 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
 }
 
 
-/*******************************************************************/
-/* Evaluate homogeneous part of Poisson Eq. at an arbitrary point. */
-/*******************************************************************/
-void evaluate_homogeneous(scalar3d *homo_scalar3d, ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_decay_ylm_coeff, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d)
-{
-  int z, i, j, k;
-  int L, m, imag;
-  int nz, nr, nt, np;
+/* /\*******************************************************************\/ */
+/* /\* Evaluate homogeneous part of Poisson Eq. at an arbitrary point. *\/ */
+/* /\*******************************************************************\/ */
+/* void evaluate_homogeneous(scalar3d *homo_scalar3d, ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_decay_ylm_coeff, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d) */
+/* { */
+/*   int z, i, j, k; */
+/*   int L, m, imag; */
+/*   int nz, nr, nt, np; */
 
-  scalar3d *r_scalar3d;
-  double roru_ijk;
-  double theta_j, x_j, phi_k;
-  double fhomo;
-  double phipart;
-  double ylm_jk;
-  double A_lm, B_lm;
+/*   scalar3d *r_scalar3d; */
+/*   double roru_ijk; */
+/*   double theta_j, x_j, phi_k; */
+/*   double fhomo; */
+/*   double phipart; */
+/*   double ylm_jk; */
+/*   double A_lm, B_lm; */
 
-  nz = homo_scalar3d->nz;
-  nr = homo_scalar3d->nr;
-  nt = homo_scalar3d->nt;
-  np = homo_scalar3d->np;
+/*   nz = homo_scalar3d->nz; */
+/*   nr = homo_scalar3d->nr; */
+/*   nt = homo_scalar3d->nt; */
+/*   np = homo_scalar3d->np; */
 
-  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+/*   r_scalar3d = scalar3d_alloc(nz, nr, nt, np); */
 
-  /* determine radius or 1/radius for each gridpoint */
-  rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+/*   /\* determine radius or 1/radius for each gridpoint *\/ */
+/*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
   
-/*   print_ylm_coeff(homo_grow_ylm_coeff); */
-/*   print_ylm_coeff(homo_decay_ylm_coeff); */
+/* /\*   print_ylm_coeff(homo_grow_ylm_coeff); *\/ */
+/* /\*   print_ylm_coeff(homo_decay_ylm_coeff); *\/ */
 
-  for ( z = 0; z < nz; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	for ( k = 0; k < np; k++ ) {
-	  roru_ijk = scalar3d_get(r_scalar3d, z, i, j, k);
-	  theta_j = PI*j/(nt-1); 
-	  x_j = cos(theta_j);
-	  phi_k = 2*PI*k/np;	
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  roru_ijk = scalar3d_get(r_scalar3d, z, i, j, k); */
+/* 	  theta_j = PI*j/(nt-1);  */
+/* 	  x_j = cos(theta_j); */
+/* 	  phi_k = 2*PI*k/np;	 */
 	  
-	  /* begin sum over all spherical harmonics */	  
-	  fhomo = 0.0;
-	  for ( imag=0; imag<=1; imag++ ) {
-	    for ( m = imag; m < nt-imag; m++ ) {
-	      if(imag==0) {
-		phipart = cos(m*phi_k);
-	      } else {
-		phipart = sin(m*phi_k);
-	      }
-	      for ( L = m; L < nt-m%2; L++ ) {
-		A_lm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag);
-		B_lm = ylm_coeff_get(homo_decay_ylm_coeff, z, 0, L, m, imag);
-		ylm_jk = gsl_sf_legendre_sphPlm(L, m, x_j) * phipart;
-		if(z==0) { /* in kernel */
-		  fhomo += A_lm * pow(roru_ijk, L) * ylm_jk;
-		} else if(z==nz-1) { /* in external zone */
-		  fhomo += B_lm * pow(roru_ijk, (L+1)) * ylm_jk;		 
-		} else { /* in a shell */
-		  fhomo += (A_lm * pow(roru_ijk, L) + B_lm * pow(roru_ijk, -(L+1))) * ylm_jk;		 
-		}
-	      }
-	    }
-	  }
-	  scalar3d_set(homo_scalar3d, z, i, j, k, fhomo);
+/* 	  /\* begin sum over all spherical harmonics *\/	   */
+/* 	  fhomo = 0.0; */
+/* 	  for ( imag=0; imag<=1; imag++ ) { */
+/* 	    for ( m = imag; m < nt-imag; m++ ) { */
+/* 	      if(imag==0) { */
+/* 		phipart = cos(m*phi_k); */
+/* 	      } else { */
+/* 		phipart = sin(m*phi_k); */
+/* 	      } */
+/* 	      for ( L = m; L < nt-m%2; L++ ) { */
+/* 		A_lm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag); */
+/* 		B_lm = ylm_coeff_get(homo_decay_ylm_coeff, z, 0, L, m, imag); */
+/* 		ylm_jk = gsl_sf_legendre_sphPlm(L, m, x_j) * phipart; */
+/* 		if(z==0) { /\* in kernel *\/ */
+/* 		  fhomo += A_lm * pow(roru_ijk, L) * ylm_jk; */
+/* 		} else if(z==nz-1) { /\* in external zone *\/ */
+/* 		  fhomo += B_lm * pow(roru_ijk, (L+1)) * ylm_jk;		  */
+/* 		} else { /\* in a shell *\/ */
+/* 		  fhomo += (A_lm * pow(roru_ijk, L) + B_lm * pow(roru_ijk, -(L+1))) * ylm_jk;		  */
+/* 		} */
+/* 	      } */
+/* 	    } */
+/* 	  } */
+/* 	  scalar3d_set(homo_scalar3d, z, i, j, k, fhomo); */
 
-	}
-      }
-    }
-  }
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
   
-  r_scalar3d = scalar3d_alloc(nz, nr, nt, np);
-}
+/*   r_scalar3d = scalar3d_alloc(nz, nr, nt, np); */
+/* } */
+
+
+/* /\*************************************************************************************************\/ */
+/* /\* Solve one iteration of the Poisson equation for a source evaluated at grid points. *\/ */
+/* /\*************************************************************************************************\/ */
+/* void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_vector *alpha_vector, gsl_vector *beta_vector, scalar2d *f_scalar2d, scalar2d *g_scalar2d) */
+/* { */
+/*   int z, i, j, k; */
+/*   int L, m, imag; */
+/*   int nz, nr, nt, np; */
+
+/*   gsl_matrix ***radial_matrix; */
+/*   gsl_matrix **fouriertoylm_matrix; */
+/*   gsl_matrix **ylmtofourier_matrix; */
+
+/*   coeff *source_coeff; */
+/*   ylm_coeff *source_ylm_coeff; */
+
+/*   gsl_matrix *source_matrix; */
+/*   gsl_matrix *particular_matrix; */
+/*   ylm_coeff *particular_ylm_coeff; */
+/*   coeff *particular_coeff; */
+/*   scalar3d *particular_scalar3d; */
+
+/*   gsl_vector *homo_grow_vector; */
+/*   gsl_vector *homo_decay_vector; */
+/*   ylm_coeff *homo_grow_ylm_coeff; */
+/*   ylm_coeff *homo_decay_ylm_coeff; */
+/*   scalar3d *homo_scalar3d; */
+
+/*   nz = field_scalar3d->nz; */
+/*   nr = field_scalar3d->nr; */
+/*   nt = field_scalar3d->nt; */
+/*   np = field_scalar3d->np; */
+  
+/*   /\* allocate and make matrices for solving the radial poisson equation *\/ */
+/*   radial_matrix = radial_matrix_alloc(nz, nr, nt); */
+/*   radial_matrix_set(nz, nt, alpha_vector, beta_vector, radial_matrix); */
+  
+/*   /\* allocate and make matrices for fourier <--> spherical harmonic transforms *\/ */
+/*   fouriertoylm_matrix = fouriertoylm_matrix_alloc(nt); */
+/*   ylmtofourier_matrix = ylmtofourier_matrix_alloc(nt); */
+/*   fouriertoylm_matrix_set(fouriertoylm_matrix); */
+/*   ylmtofourier_matrix_set(ylmtofourier_matrix); */
+  
+/*   /\* allocate other things *\/ */
+/*   source_coeff = coeff_alloc(nz, nr, nt, np); */
+/*   source_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np); */
+/*   source_matrix = gsl_matrix_alloc(nz, nr); */
+/*   particular_matrix = gsl_matrix_alloc(nz, nr); */
+/*   particular_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np); */
+/*   particular_coeff = coeff_alloc(nz, nr, nt, np); */
+/*   particular_scalar3d = scalar3d_alloc(nz, nr, nt, np); */
+/*   homo_grow_vector = gsl_vector_alloc(nz); */
+/*   homo_decay_vector = gsl_vector_alloc(nz); */
+/*   homo_grow_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np); */
+/*   homo_decay_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np); */
+/*   homo_scalar3d = scalar3d_alloc(nz, nr, nt, np); */
+
+/*   /\* go to fourier series coefficients *\/ */
+/*   gridtofourier(source_coeff, s_eff_scalar3d, 0, 0); */
+    
+/*   /\* go from fourier series to spherical harmonics *\/ */
+/*   transform_fouriertoylm(source_coeff, source_ylm_coeff, fouriertoylm_matrix); */
+
+/*   /\*>>>>>>>>>>>>>>>> Solve particular and homogeneous parts of poisson equation. <<<<<<<<<<<<<<<<<<<<*\/ */
+/*   /\* Particular solution is returned as coefficients of a_iLm*T_i(xi)*Y_lm(theta, phi) basis.        *\/ */
+/*   /\* Homogeneous solution is returned as coefficients of (A_Lm*r^L + B_Lm*r^(-L-1))*Y_lm(theta, phi) *\/ */
+/*   for ( imag=0; imag<=1; imag++ ) { */
+/*     for ( m = imag; m < nt-imag; m++ ) { */
+/*       for ( L = m; L < nt-m%2; L++ ) { */
+/* 	/\* Solve particular part *\/ */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  for ( i = 0; i < nr; i++ ) { */
+/* 	    gsl_matrix_set(source_matrix, z, i, ylm_coeff_get(source_ylm_coeff, z, i, L, m, imag)); */
+/* 	  } */
+/* 	} */
+/* 	gsl_matrix_set_zero(particular_matrix); */
+/* 	solve_radial_particular(L, radial_matrix, alpha_vector, beta_vector, source_matrix, particular_matrix); */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  for ( i = 0; i < nr; i++ ) { */
+/* 	    ylm_coeff_set(particular_ylm_coeff, z, i, L, m, imag, gsl_matrix_get(particular_matrix, z, i)); */
+/* 	  } */
+/* 	} */
+/* 	/\* Solve homogeneous part *\/ */
+/* 	solve_radial_homogeneous(L, alpha_vector, beta_vector, particular_matrix, homo_grow_vector, homo_decay_vector); */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  ylm_coeff_set(homo_grow_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_grow_vector, z)); */
+/* 	  ylm_coeff_set(homo_decay_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_decay_vector, z)); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+  
+/*   /\* evaluate particular solution on grid *\/ */
+/*   transform_ylmtofourier(particular_ylm_coeff, particular_coeff, ylmtofourier_matrix); */
+/*   fouriertogrid(particular_scalar3d, particular_coeff, 0, 0); */
+
+/*   /\* evaluate homogeneous solution on grid *\/ */
+/*   evaluate_homogeneous(homo_scalar3d, homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+
+/*   /\* field = particular + homogeneous *\/ */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  scalar3d_set(field_scalar3d, z, i, j, k,  */
+/* 		       scalar3d_get(particular_scalar3d, z, i, j, k) + scalar3d_get(homo_scalar3d, z, i, j, k)); */
+/* 	} */
+/*       } */
+/*     } */
+/*   }   */
+  
+/*   /\* free memory *\/ */
+/*   radial_matrix_free(nz, nt, radial_matrix); */
+/*   fouriertoylm_matrix_free(fouriertoylm_matrix); */
+/*   ylmtofourier_matrix_free(ylmtofourier_matrix); */
+/*   coeff_free(source_coeff); */
+/*   ylm_coeff_free(source_ylm_coeff); */
+/*   gsl_matrix_free(source_matrix); */
+/*   gsl_matrix_free(particular_matrix); */
+/*   ylm_coeff_free(particular_ylm_coeff); */
+/*   coeff_free(particular_coeff); */
+/*   scalar3d_free(particular_scalar3d); */
+/*   gsl_vector_free(homo_grow_vector); */
+/*   gsl_vector_free(homo_decay_vector); */
+/*   ylm_coeff_free(homo_grow_ylm_coeff); */
+/*   ylm_coeff_free(homo_decay_ylm_coeff); */
+/*   scalar3d_free(homo_scalar3d); */
+/* } */
 
 
 /*************************************************************************************************/
@@ -269,14 +399,15 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
   gsl_matrix *source_matrix;
   gsl_matrix *particular_matrix;
   ylm_coeff *particular_ylm_coeff;
-  coeff *particular_coeff;
-  scalar3d *particular_scalar3d;
 
   gsl_vector *homo_grow_vector;
   gsl_vector *homo_decay_vector;
   ylm_coeff *homo_grow_ylm_coeff;
   ylm_coeff *homo_decay_ylm_coeff;
-  scalar3d *homo_scalar3d;
+  ylm_coeff *homogeneous_ylm_coeff;
+
+  ylm_coeff *field_ylm_coeff;
+  coeff *field_coeff;
 
   nz = field_scalar3d->nz;
   nr = field_scalar3d->nr;
@@ -299,19 +430,22 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
   source_matrix = gsl_matrix_alloc(nz, nr);
   particular_matrix = gsl_matrix_alloc(nz, nr);
   particular_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
-  particular_coeff = coeff_alloc(nz, nr, nt, np);
-  particular_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   homo_grow_vector = gsl_vector_alloc(nz);
   homo_decay_vector = gsl_vector_alloc(nz);
   homo_grow_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
   homo_decay_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
-  homo_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+  homogeneous_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
+  field_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
+  field_coeff = coeff_alloc(nz, nr, nt, np);
+
 
   /* go to fourier series coefficients */
   gridtofourier(source_coeff, s_eff_scalar3d, 0, 0);
     
   /* go from fourier series to spherical harmonics */
   transform_fouriertoylm(source_coeff, source_ylm_coeff, fouriertoylm_matrix);
+
+  /* print_ylm_coeff(source_ylm_coeff); */
 
   /*>>>>>>>>>>>>>>>> Solve particular and homogeneous parts of poisson equation. <<<<<<<<<<<<<<<<<<<<*/
   /* Particular solution is returned as coefficients of a_iLm*T_i(xi)*Y_lm(theta, phi) basis.        */
@@ -341,119 +475,10 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
       }
     }
   }
+
+  /* Convert homogeneous solution from radial functions to coefficients in (xi, theta, phi) coordinate system */  
+  homogeneoustochebyshev(homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_vector, beta_vector, homogeneous_ylm_coeff);
   
-  /* evaluate particular solution on grid */
-  transform_ylmtofourier(particular_ylm_coeff, particular_coeff, ylmtofourier_matrix);
-  fouriertogrid(particular_scalar3d, particular_coeff, 0, 0);
-
-  /* evaluate homogeneous solution on grid */
-  evaluate_homogeneous(homo_scalar3d, homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-
-  /* field = particular + homogeneous */
-  for ( z = 0; z < nz; z++ ) {
-    for ( i = 0; i < nr; i++ ) {
-      for ( j = 0; j < nt; j++ ) {
-	for ( k = 0; k < np; k++ ) {
-	  scalar3d_set(field_scalar3d, z, i, j, k, 
-		       scalar3d_get(particular_scalar3d, z, i, j, k) + scalar3d_get(homo_scalar3d, z, i, j, k));
-	}
-      }
-    }
-  }  
-  
-  /* free memory */
-  radial_matrix_free(nz, nt, radial_matrix);
-  fouriertoylm_matrix_free(fouriertoylm_matrix);
-  ylmtofourier_matrix_free(ylmtofourier_matrix);
-  coeff_free(source_coeff);
-  ylm_coeff_free(source_ylm_coeff);
-  gsl_matrix_free(source_matrix);
-  gsl_matrix_free(particular_matrix);
-  ylm_coeff_free(particular_ylm_coeff);
-  coeff_free(particular_coeff);
-  scalar3d_free(particular_scalar3d);
-  gsl_vector_free(homo_grow_vector);
-  gsl_vector_free(homo_decay_vector);
-  ylm_coeff_free(homo_grow_ylm_coeff);
-  ylm_coeff_free(homo_decay_ylm_coeff);
-  scalar3d_free(homo_scalar3d);
-}
-
-
-/*************************************************************************************************/
-/* Solve the Poisson equation for a source already decomposed into T_i(xi) and Y_l^m(theta, phi) */
-/*************************************************************************************************/
-void solve_poisson_spherical(ylm_coeff *field_ylm_coeff, ylm_coeff *source_ylm_coeff, gsl_vector *alpha_v, gsl_vector *beta_v)
-{
-  int imag, z, i, L, m;
-  int nz, nr, nt, np;
-  gsl_vector *homo_grow_v;
-  gsl_vector *homo_decay_v;
-  gsl_matrix *source_matrix;
-  gsl_matrix *particular_matrix;
-  gsl_matrix ***radial_matrix;
-  ylm_coeff *particular_ylm_coeff;
-  ylm_coeff *homogeneous_ylm_coeff;
-  ylm_coeff *homo_grow_ylm_coeff;
-  ylm_coeff *homo_decay_ylm_coeff;
-
-  nz = field_ylm_coeff->nz;
-  nr = field_ylm_coeff->nr;
-  nt = field_ylm_coeff->nt;
-  np = field_ylm_coeff->np;
-
-  homo_grow_v = gsl_vector_alloc(nz);
-  homo_decay_v = gsl_vector_alloc(nz);
-  source_matrix = gsl_matrix_alloc(nz, nr);
-  particular_matrix = gsl_matrix_alloc(nz, nr);
-
-  particular_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
-  homogeneous_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np);
-  homo_grow_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
-  homo_decay_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np);
-  
-  /* make matrices for solving the radial poisson equation */
-  radial_matrix = radial_matrix_alloc(nz, nr, nt);
-  radial_matrix_set(nz, nt, alpha_v, beta_v, radial_matrix);
-  
-  for ( imag=0; imag<=1; imag++ ) {
-    for ( m = imag; m < nt-imag; m++ ) {
-      for ( L = m; L < nt-m%2; L++ ) {
-	/* Solve each radial equation */
-	for ( z = 0; z < nz; z++ ) {
-	  for ( i = 0; i < nr; i++ ) {
-	    gsl_matrix_set(source_matrix, z, i, ylm_coeff_get(source_ylm_coeff, z, i, L, m, imag));
-	  }
-	}
-	/*printf("imag=%d\tm=%d\tL=%d:\n", imag, m, L);
-	  print_matrix(source_matrix);*/
-	/* Solve particular part */
-	/*printf("imag=%d\tm=%d\tL=%d:\n", imag, m, L);*/
-	gsl_matrix_set_zero(particular_matrix);
-	solve_radial_particular(L, radial_matrix, alpha_v, beta_v, source_matrix, particular_matrix);
-	for ( z = 0; z < nz; z++ ) {
-	  for ( i = 0; i < nr; i++ ) {
-	    ylm_coeff_set(particular_ylm_coeff, z, i, L, m, imag, gsl_matrix_get(particular_matrix, z, i));
-	  }
-	}
-	/* Solve homogeneous part */
-	solve_radial_homogeneous(L, alpha_v, beta_v, particular_matrix, homo_grow_v, homo_decay_v);
-	for ( z = 0; z < nz; z++ ) {
-	  ylm_coeff_set(homo_grow_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_grow_v, z));
-	  ylm_coeff_set(homo_decay_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_decay_v, z));
-	}
-      }
-    }
-  }
-  
-  /*print_ylm_coeff(homo_grow_ylm_coeff);
-    print_ylm_coeff(homo_decay_ylm_coeff);*/
-  /* THIS CAUSES A BUS ERROR!!!!!!!!!!!!!! */
-  /* Convert homogeneous solution from radial functions to coefficients in (xi, theta, phi) coordinate system */
-  homogeneoustochebyshev(homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_v, beta_v, homogeneous_ylm_coeff);
-  /*printf("here\n");*/
-  /*print_ylm_coeff(homogeneous_ylm_coeff);*/
-
   /* field = particular + homogeneous */
   for ( imag=0; imag<=1; imag++ ) {
     for ( m = imag; m < nt-imag; m++ ) {
@@ -467,17 +492,130 @@ void solve_poisson_spherical(ylm_coeff *field_ylm_coeff, ylm_coeff *source_ylm_c
       }
     }
   }
+
+
+  /* evaluate solution on grid */
+  transform_ylmtofourier(field_ylm_coeff, field_coeff, ylmtofourier_matrix);
+  fouriertogrid(field_scalar3d, field_coeff, 0, 0);
+
   
   /* free memory */
-  gsl_vector_free(homo_grow_v);
-  gsl_vector_free(homo_decay_v);
+  radial_matrix_free(nz, nt, radial_matrix);
+  fouriertoylm_matrix_free(fouriertoylm_matrix);
+  ylmtofourier_matrix_free(ylmtofourier_matrix);
+  coeff_free(source_coeff);
+  ylm_coeff_free(source_ylm_coeff);
   gsl_matrix_free(source_matrix);
   gsl_matrix_free(particular_matrix);
-  radial_matrix_free(nz, nt, radial_matrix);
   ylm_coeff_free(particular_ylm_coeff);
+  gsl_vector_free(homo_grow_vector);
+  gsl_vector_free(homo_decay_vector);
   ylm_coeff_free(homo_grow_ylm_coeff);
   ylm_coeff_free(homo_decay_ylm_coeff);
+  ylm_coeff_free(homogeneous_ylm_coeff);
+  ylm_coeff_free(field_ylm_coeff);
+  coeff_free(field_coeff);
 }
+
+
+/* /\*************************************************************************************************\/ */
+/* /\* Solve the Poisson equation for a source already decomposed into T_i(xi) and Y_l^m(theta, phi) *\/ */
+/* /\*************************************************************************************************\/ */
+/* void solve_poisson_spherical(ylm_coeff *field_ylm_coeff, ylm_coeff *source_ylm_coeff, gsl_vector *alpha_v, gsl_vector *beta_v) */
+/* { */
+/*   int imag, z, i, L, m; */
+/*   int nz, nr, nt, np; */
+/*   gsl_vector *homo_grow_v; */
+/*   gsl_vector *homo_decay_v; */
+/*   gsl_matrix *source_matrix; */
+/*   gsl_matrix *particular_matrix; */
+/*   gsl_matrix ***radial_matrix; */
+/*   ylm_coeff *particular_ylm_coeff; */
+/*   ylm_coeff *homogeneous_ylm_coeff; */
+/*   ylm_coeff *homo_grow_ylm_coeff; */
+/*   ylm_coeff *homo_decay_ylm_coeff; */
+
+/*   nz = field_ylm_coeff->nz; */
+/*   nr = field_ylm_coeff->nr; */
+/*   nt = field_ylm_coeff->nt; */
+/*   np = field_ylm_coeff->np; */
+
+/*   homo_grow_v = gsl_vector_alloc(nz); */
+/*   homo_decay_v = gsl_vector_alloc(nz); */
+/*   source_matrix = gsl_matrix_alloc(nz, nr); */
+/*   particular_matrix = gsl_matrix_alloc(nz, nr); */
+
+/*   particular_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np); */
+/*   homogeneous_ylm_coeff = ylm_coeff_alloc(nz, nr, nt, np); */
+/*   homo_grow_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np); */
+/*   homo_decay_ylm_coeff = ylm_coeff_alloc(nz, 1, nt, np); */
+  
+/*   /\* make matrices for solving the radial poisson equation *\/ */
+/*   radial_matrix = radial_matrix_alloc(nz, nr, nt); */
+/*   radial_matrix_set(nz, nt, alpha_v, beta_v, radial_matrix); */
+  
+/*   for ( imag=0; imag<=1; imag++ ) { */
+/*     for ( m = imag; m < nt-imag; m++ ) { */
+/*       for ( L = m; L < nt-m%2; L++ ) { */
+/* 	/\* Solve each radial equation *\/ */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  for ( i = 0; i < nr; i++ ) { */
+/* 	    gsl_matrix_set(source_matrix, z, i, ylm_coeff_get(source_ylm_coeff, z, i, L, m, imag)); */
+/* 	  } */
+/* 	} */
+/* 	/\*printf("imag=%d\tm=%d\tL=%d:\n", imag, m, L); */
+/* 	  print_matrix(source_matrix);*\/ */
+/* 	/\* Solve particular part *\/ */
+/* 	/\*printf("imag=%d\tm=%d\tL=%d:\n", imag, m, L);*\/ */
+/* 	gsl_matrix_set_zero(particular_matrix); */
+/* 	solve_radial_particular(L, radial_matrix, alpha_v, beta_v, source_matrix, particular_matrix); */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  for ( i = 0; i < nr; i++ ) { */
+/* 	    ylm_coeff_set(particular_ylm_coeff, z, i, L, m, imag, gsl_matrix_get(particular_matrix, z, i)); */
+/* 	  } */
+/* 	} */
+/* 	/\* Solve homogeneous part *\/ */
+/* 	solve_radial_homogeneous(L, alpha_v, beta_v, particular_matrix, homo_grow_v, homo_decay_v); */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  ylm_coeff_set(homo_grow_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_grow_v, z)); */
+/* 	  ylm_coeff_set(homo_decay_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_decay_v, z)); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+  
+/*   /\*print_ylm_coeff(homo_grow_ylm_coeff); */
+/*     print_ylm_coeff(homo_decay_ylm_coeff);*\/ */
+/*   /\* THIS CAUSES A BUS ERROR!!!!!!!!!!!!!! *\/ */
+/*   /\* Convert homogeneous solution from radial functions to coefficients in (xi, theta, phi) coordinate system *\/ */
+/*   homogeneoustochebyshev(homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_v, beta_v, homogeneous_ylm_coeff); */
+/*   /\*printf("here\n");*\/ */
+/*   /\*print_ylm_coeff(homogeneous_ylm_coeff);*\/ */
+
+/*   /\* field = particular + homogeneous *\/ */
+/*   for ( imag=0; imag<=1; imag++ ) { */
+/*     for ( m = imag; m < nt-imag; m++ ) { */
+/*       for ( L = m; L < nt-m%2; L++ ) { */
+/* 	for ( z = 0; z < nz; z++ ) { */
+/* 	  for ( i = 0; i < nr; i++ ) { */
+/* 	    ylm_coeff_set(field_ylm_coeff, z, i, L, m, imag, */
+/* 			  ylm_coeff_get(particular_ylm_coeff, z, i, L, m, imag) + ylm_coeff_get(homogeneous_ylm_coeff, z, i, L, m, imag)); */
+/* 	  } */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+  
+/*   /\* free memory *\/ */
+/*   gsl_vector_free(homo_grow_v); */
+/*   gsl_vector_free(homo_decay_v); */
+/*   gsl_matrix_free(source_matrix); */
+/*   gsl_matrix_free(particular_matrix); */
+/*   radial_matrix_free(nz, nt, radial_matrix); */
+/*   ylm_coeff_free(particular_ylm_coeff); */
+/*   ylm_coeff_free(homo_grow_ylm_coeff); */
+/*   ylm_coeff_free(homo_decay_ylm_coeff); */
+/* } */
   
   
 /***************************************************************************************************************/
@@ -841,21 +979,41 @@ void homogeneoustochebyshev(ylm_coeff *homo_grow_ylm_coeff, ylm_coeff *homo_deca
   plan_forward_xi = fftw_plan_r2r_1d ( nr, in1dxi, out1dxi, FFTW_REDFT00, FFTW_ESTIMATE );
   /* do type-3 DCT (inverse of type-2 DCT) */ 
   plan_forward_xiodd = fftw_plan_r2r_1d ( nr-1, in1dxiodd, out1dxiodd, FFTW_REDFT01, FFTW_ESTIMATE ); 
-  
+ 
+/*   z = 0; /\* kernel *\/ */
+/*   /\* even Chebyshev series if L is even *\/  */
+/*   for ( imag=0; imag<=1; imag++ ) { */
+/*     for ( m = imag; m < nt-imag; m++ ) { */
+/*       for ( L = m; L < nt-m%2; L++ ) { */
+/* 	alpha = gsl_vector_get(alpha_vector, z); */
+/* 	alm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag);   */
+/* 	for ( i = 0; i < nr; i++ ) { */
+/* 	  xi_i = sin(PI*i/(2*(nr-1))); */
+/* 	  in1dxi[i] = alm*pow(alpha*xi_i, L); */
+/* 	} */
+/* 	fftw_execute ( plan_forward_xi ); */
+/* 	for ( i = 0; i < nr; i++ ) { */
+/* 	  ylm_coeff_set( homogeneous_ylm_coeff, z, i, L, m, imag,  */
+/* 			 out1dxi[i]*neg1toi(i)*(2.0-delta(i, 0)-delta(i, nr-1))/(2*(nr-1)) ); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+
   z = 0; /* kernel */
-  /* even Chebyshev series if L is even */ 
+  /* even Chebyshev series if L is even */
   for ( imag=0; imag<=1; imag++ ) {
     for ( L = 2*imag ; L < nt-imag; L += 2 ) { /* L = 0 and L = npc-1 don't have immaginary parts */
-      for ( m = 0; m <= L; m++ ) {    
+      for ( m = 0; m <= L; m++ ) {
 	alpha = gsl_vector_get(alpha_vector, z);
-	alm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag);  
+	alm = ylm_coeff_get(homo_grow_ylm_coeff, z, 0, L, m, imag);
 	for ( i = 0; i < nr; i++ ) {
 	  xi_i = sin(PI*i/(2*(nr-1)));
 	  in1dxi[i] = alm*pow(alpha*xi_i, L);
 	}
 	fftw_execute ( plan_forward_xi );
 	for ( i = 0; i < nr; i++ ) {
-	  ylm_coeff_set( homogeneous_ylm_coeff, z, i, L, m, imag, 
+	  ylm_coeff_set( homogeneous_ylm_coeff, z, i, L, m, imag,
 		     out1dxi[i]*neg1toi(i)*(2.0-delta(i, 0)-delta(i, nr-1))/(2*(nr-1)) );
 	}
       }

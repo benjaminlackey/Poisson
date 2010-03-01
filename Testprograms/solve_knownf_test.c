@@ -32,10 +32,10 @@ double field(int z, double r, double theta, double phi);
 int main (void)
 {
   int z, i, j, k;
-  int nz = 5;
-  int nr = 45; /* must be odd? */
+  int nz = 3;
+  int nr = 25; /* must be odd? */
   int nt;
-  int np = 30; /* must be even */
+  int np = 16; /* must be even */
 
   scalar2d *boundary_scalar2d;
   scalar2d *f_scalar2d;
@@ -54,7 +54,15 @@ int main (void)
   scalar3d *pseudolapf_scalar3d;
   scalar3d *field_solution_scalar3d;
 
-  double roru;
+  bound_coeff *f_bound_coeff;
+  bound_coeff *g_bound_coeff;
+  coeff *source_coeff;
+  coeff *field_coeff;
+
+  gsl_matrix **fouriertoylm_matrix;
+  gsl_matrix **ylmtofourier_matrix;
+
+  double roru, xi_i, theta_j, phi_k;
   double alpha, j1, j2, j3, a, residual_d, source_d, source_eff;
   double pseudolapf;
   double num, anal, error;
@@ -78,28 +86,49 @@ int main (void)
   source_eff_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   pseudolapf_scalar3d = scalar3d_alloc(nz, nr, nt, np);
   field_solution_scalar3d = scalar3d_alloc(nz, nr, nt, np);
+
+  f_bound_coeff = bound_coeff_alloc(nz, nt, np);
+  g_bound_coeff = bound_coeff_alloc(nz, nt, np);
+  source_coeff = coeff_alloc(nz, nr, nt, np);
+  field_coeff = coeff_alloc(nz, nr, nt, np);
+
+  /* allocate and make matrices for fourier <--> spherical harmonic transforms */
+  fouriertoylm_matrix = fouriertoylm_matrix_alloc(nt);
+  ylmtofourier_matrix = ylmtofourier_matrix_alloc(nt);
+  fouriertoylm_matrix_set(fouriertoylm_matrix);
+  ylmtofourier_matrix_set(ylmtofourier_matrix);
   
   /* evaluate boundary function on gridpoints */
   boundarytogrid(boundary_scalar2d, boundary);
-  
+  /* print_scalar2d(boundary_scalar2d); */
+
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(boundary_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-/*   print_vector(alpha_vector); */
-/*   print_vector(beta_vector); */
+  print_vector(alpha_vector); 
+  print_vector(beta_vector); 
 /*   print_scalar2d(f_scalar2d); */
 /*   print_scalar2d(g_scalar2d); */
+  gridtofourier_bound(f_bound_coeff, f_scalar2d);
+  gridtofourier_bound(g_bound_coeff, g_scalar2d);
+  print_bound_coeff(f_bound_coeff);
+  print_bound_coeff(g_bound_coeff);
 
   /* evaluate source at gridpoints */
   functiontogrid(source_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, source);
-
+  gridtofourier(source_coeff, source_scalar3d, 0, 0);
+   print_coeff(source_coeff);
+  
   /* evaluate analytical solution at gridpoints */
   functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, field);
-
+  gridtofourier(field_coeff, field_scalar3d, 0, 0);
+   print_coeff(field_coeff);
+  
   /* evaluate radius at gridpoints */
   rofxtp(roru_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
 
   /* evaluate residual */
   residual(residual_scalar3d, field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  /* print_scalar3d(residual_scalar3d); */
   jacobian1(j1_scalar3d, alpha_vector, f_scalar2d, g_scalar2d);
   jacobian2(j2_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   jacobian3(j3_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
@@ -122,21 +151,26 @@ int main (void)
 	  
 	  roru = scalar3d_get(roru_scalar3d, z, i, j, k);
 	  
-	  if(z==nz-1) {
-	    source_eff = (source_d/pow(roru, 4) + residual_d) / a;
-	  } else {
+	  if(z==nz-1&&i==nr-1) { /* infinity */
+	    source_eff = (1.0*source_d + residual_d) / a;
+	  } else if(z==nz-1) { /* external compactified zone */
+	    xi_i = -cos(PI*i/(nr-1));
+	    source_eff = (source_d/pow(roru, 4) + residual_d) * pow(alpha*(xi_i-1.0), 4) / a;
+	  } else { /* kernel and shells */
 	    source_eff = (source_d + residual_d) / a;
 	  }
-
+	  
 	  scalar3d_set(source_eff_scalar3d, z, i, j, k, source_eff);
 	  /*printf("z=%d, i=%d, j=%d, k=%d, roru=%.18e, alpha=%.18e, a=%.18e, res=%.18e, s=%.18e\n", z, i, j, k, roru, alpha, a, residual_d, source_d);*/
 	}
       }
     }
   }
+
   
   pseudo_spherical_laplacian(pseudolapf_scalar3d, field_scalar3d, alpha_vector, beta_vector);
-  /* compare numerical to analytical solution */
+
+  /* compare left and right hand sides */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
@@ -144,29 +178,33 @@ int main (void)
 	  source_eff = scalar3d_get(source_eff_scalar3d, z, i, j, k);
  	  pseudolapf = scalar3d_get(pseudolapf_scalar3d, z, i, j, k);
 	  error = (source_eff - pseudolapf)/source_eff;
-	  printf("z=%d, i=%d, j=%d, k=%d, s_eff=%.18e, lapf_a=%.18e, err=%.18e\n", z, i, j, k, source_eff, pseudolapf, error);
+	  /*printf("z=%d, i=%d, j=%d, k=%d, s_eff=%.18e, lapf_a=%.18e, err=%.18e\n", z, i, j, k, source_eff, pseudolapf, error);*/
 	}
       }
     }
   }
-
-  /* /\* solves \tilde \Delta f = \tilde \sigma where \tilde \sigma = (\sigma + R(f))/a *\/ */
-/*   poisson_iteration(field_solution_scalar3d, source_eff_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
   
-/*   /\* compare numerical to analytical solution *\/ */
-/*   for ( z = 0; z < nz; z++ ) { */
-/*     for ( i = 0; i < nr; i++ ) { */
-/*       for ( j = 0; j < nt; j++ ) { */
-/* 	for ( k = 0; k < np; k++ ) { */
-/* 	  source_d = scalar3d_get(source_scalar3d, z, i, j, k); */
-/*  	  num = scalar3d_get(field_solution_scalar3d, z, i, j, k); */
-/*  	  anal = scalar3d_get(field_scalar3d, z, i, j, k); */
-/* 	  error = (num - anal)/anal; */
-/* 	  printf("z=%d, i=%d, j=%d, k=%d, s=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, source_d, num, anal, error); */
-/* 	} */
-/*       } */
-/*     } */
-/*   } */
+  /* solves \tilde \Delta f = \tilde \sigma where \tilde \sigma = (\sigma + R(f))/a */
+  poisson_iteration(field_solution_scalar3d, source_eff_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  
+  /* compare numerical to analytical solution */
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  xi_i = ((z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)));
+	  theta_j = PI*j/(nt-1);
+	  phi_k = 2*PI*k/np;
+	  source_eff = scalar3d_get(source_scalar3d, z, i, j, k);
+	  residual_d = scalar3d_get(residual_scalar3d, z, i, j, k);
+ 	  num = scalar3d_get(field_solution_scalar3d, z, i, j, k);
+ 	  anal = scalar3d_get(field_scalar3d, z, i, j, k);
+	  error = (num - anal)/anal;
+	  printf("z=%d, i=%d, j=%d, k=%d, xi_i=%.18e, theta_j=%.18e, phi_k=%.18e, s_eff=%.18e, res=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, xi_i, theta_j, phi_k, source_eff, residual_d, num, anal, error);
+	}
+      }
+    }
+  }
 
 
   scalar2d_free(boundary_scalar2d);
@@ -185,6 +223,14 @@ int main (void)
   scalar3d_free(source_eff_scalar3d);
   scalar3d_free(pseudolapf_scalar3d);
   scalar3d_free(field_solution_scalar3d);
+
+  bound_coeff_free(f_bound_coeff);
+  bound_coeff_free(g_bound_coeff);
+  coeff_free(source_coeff);
+  coeff_free(field_coeff);
+
+  fouriertoylm_matrix_free(fouriertoylm_matrix);
+  ylmtofourier_matrix_free(ylmtofourier_matrix);
 
   return 0;
 }
@@ -253,7 +299,8 @@ void pseudo_spherical_laplacian(scalar3d *pseudolapf_scalar3d, scalar3d *f_scala
 	    d2f_dxi2 = scalar3d_get(d2f_dxi2_scalar3d, z, i, j, k); 
 	    anglapf = scalar3d_get(anglapf_scalar3d, z, i, j, k); 
 	    
-	    lapf = ( d2f_dxi2 + (1.0 / pow((xi_i-1.0), 2)) * anglapf ) / (alpha*alpha);
+	    /* lapf = ( d2f_dxi2 + (1.0 / pow((xi_i-1.0), 2)) * anglapf ) / (alpha*alpha); */
+	    lapf = alpha*alpha * ( pow(xi_i-1.0, 4)*d2f_dxi2 + pow(xi_i-1.0, 2)*anglapf );
 	    scalar3d_set(pseudolapf_scalar3d, z, i, j, k, lapf);	 
 	  } else {
 	    alpha = gsl_vector_get(alpha_vector, z);
@@ -444,16 +491,16 @@ void d2fdxi2(coeff *d2fdxi2, coeff *f)
 /*   else */
 /*     return 10.0; */
 /* } */
-/* double boundary(int z, double theta, double phi) */
-/* { */
-/*   int L1 = 2; */
-/*   int m1 = 1; */
+double boundary(int z, double theta, double phi)
+{
+  int L1 = 1;
+  int m1 = 0;
 
-/*   if(z==0) */
-/*     return 5.0/\**(1.0 + 0.2*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)))*\/; */
-/*   else */
-/*     return 10.0; */
-/* } */
+  if(z==0)
+    return 5.0 + cos(2.0*theta)/*0.2*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))*/;
+  else
+    return 10.0;
+}
 /* double boundary(int z, double theta, double phi) */
 /* { */
 /*   int L1 = 2; */
@@ -466,35 +513,65 @@ void d2fdxi2(coeff *d2fdxi2, coeff *f)
 /*   else  */
 /*     return 20.0*(1.0 + 0.2*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))); */
 /* } */
-double boundary(int z, double theta, double phi)
-{
-  double a;
-  double b;
-  double c;
-  double den;
 
-  if(z==0) {
-    a = 1.7;
-    b = 2.0;
-    c = 2.5;
-    den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2);
-    return pow(den, -0.5);
-  } else if (z==1) {
-    a = 5.0;
-    b = 6.0;
-    c = 7.0;
-    den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2);
-    return pow(den, -0.5);
-  } else if (z==2) {
-    return 10.0;
-  } else {
-    a = 17.0;
-    b = 15.0;
-    c = 25.0;
-    den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2);
-    return pow(den, -0.5);
-  }
-}
+/* double boundary(int z, double theta, double phi) */
+/* { */
+/*   if(z==0) { */
+/*     return 1.0; */
+/*   } else if (z==1) { */
+/*     return 5.0; */
+/*   } else if (z==2) { */
+/*     return 10.0; */
+/*   } else { */
+/*     return 20.0; */
+/*   } */
+/* } */
+/* double boundary(int z, double theta, double phi) */
+/* { */
+/*   int L1 = 1;  */
+/*   int m1 = 0;  */
+  
+/*   if(z==0) { */
+/*     return 1.0*(1.0 + 0.2*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))); */
+/*   } else if (z==1) { */
+/*     return 5.0; */
+/*   } else if (z==2) { */
+/*     return 10.0; */
+/*   } else { */
+/*     return 20.0; */
+/*   } */
+/* } */
+/* double boundary(int z, double theta, double phi) */
+/* { */
+/*   double a; */
+/*   double b; */
+/*   double c; */
+/*   double den; */
+
+/*   phi = phi+1.0; */
+
+/*   if(z==0) { */
+/*     a = 1.7; */
+/*     b = 1.0; */
+/*     c = 1.2; */
+/*     den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2); */
+/*     return pow(den, -0.5)*(1.0+0.5*cos(theta)); */
+/*   } else if (z==1) { */
+/*     a = 4.0; */
+/*     b = 5.0; */
+/*     c = 6.0; */
+/*     den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2); */
+/*     return pow(den, -0.5)*(1.0+0.5*cos(theta)); */
+/*   } else if (z==2) { */
+/*     return 10.0; */
+/*   } else { */
+/*     a = 20.0; */
+/*     b = 18.0; */
+/*     c = 21.0; */
+/*     den = pow(sin(theta)*cos(phi) / a, 2) + pow(sin(theta)*sin(phi) / b, 2) + pow(cos(theta) / c, 2); */
+/*     return pow(den, -0.5)*(1.0+0.5*cos(theta)); */
+/*   } */
+/* } */
 
 /**********************/
 /* Source function.   */
@@ -502,20 +579,19 @@ double boundary(int z, double theta, double phi)
 double source(int z, double r, double theta, double phi)
 {
   double R = 10.0;
-  if(z<3)
+  if(z<2)
     return (R - r*r/R);
   else
     return pow(R, 5)/pow(r, 4);
 }
-
 /* double source(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 0; */
-/*   int m1 = 0; */
-/*   int L2 = 8; */
-/*   int m2 = 8; */
+/*   int L1 = 3; */
+/*   int m1 = 3; */
+/*   int L2 = 4; */
+/*   int m2 = 1; */
 /*   double R = 10.0; */
-/*   if(z<2) */
+/*   if(z<3) */
 /*     return pow(r, L1)*((2*L1+3)*(2*L1+5)/pow(R, 2*L1+3) - (4*L1+10)*(2*L1+3)*r*r/pow(R, 2*L1+5)) */
 /*       *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)) */
 /*       + pow(r, L2)*((2*L2+3)*(2*L2+5)/pow(R, 2*L2+3) - (4*L2+10)*(2*L2+3)*r*r/pow(R, 2*L2+5)) */
@@ -531,20 +607,19 @@ double source(int z, double r, double theta, double phi)
 double field(int z, double r, double theta, double phi)
 {
   double R = 10.0;
-  if(z<3)
+  if(z<2)
     return R*r*r/6.0 - pow(r, 4)/(20.0*R) - 3.0*pow(R, 3)/4.0;
   else
     return pow(R, 5)/(2.0*r*r) - 17.0*pow(R, 4)/(15.0*r);
 }
-
 /* double field(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 0; */
-/*   int m1 = 0; */
-/*   int L2 = 8; */
-/*   int m2 = 8; */
+/*   int L1 = 3; */
+/*   int m1 = 3; */
+/*   int L2 = 4; */
+/*   int m2 = 1; */
 /*   double R = 10.0; */
-/*   if(z<2) */
+/*   if(z<3) */
 /*     return pow(r, L1)*(0.5*(2*L1+5)*r*r/pow(R, 2*L1+3) - 0.5*(2*L1+3)*pow(r, 4)/pow(R, 2*L1+5)) */
 /*       *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)) */
 /*       + pow(r, L2)*(0.5*(2*L2+5)*r*r/pow(R, 2*L2+3) - 0.5*(2*L2+3)*pow(r, 4)/pow(R, 2*L2+5)) */
