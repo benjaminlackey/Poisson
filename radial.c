@@ -441,11 +441,12 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
 
   /* go to fourier series coefficients */
   gridtofourier(source_coeff, s_eff_scalar3d, 0, 0);
+ /*  print_coeff(source_coeff);  */
     
   /* go from fourier series to spherical harmonics */
   transform_fouriertoylm(source_coeff, source_ylm_coeff, fouriertoylm_matrix);
 
-  /* print_ylm_coeff(source_ylm_coeff); */
+/*   print_ylm_coeff(source_ylm_coeff); */
 
   /*>>>>>>>>>>>>>>>> Solve particular and homogeneous parts of poisson equation. <<<<<<<<<<<<<<<<<<<<*/
   /* Particular solution is returned as coefficients of a_iLm*T_i(xi)*Y_lm(theta, phi) basis.        */

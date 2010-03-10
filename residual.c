@@ -134,11 +134,13 @@ void residual(scalar3d *residual_scalar3d, scalar3d *f_scalar3d, gsl_vector *alp
 	    res = term1 + term2 + term3;
 	  
 	  scalar3d_set(residual_scalar3d, z, i, j, k, res);
-	  /* printf("z=%d, i=%d, j=%d, k=%d, residual = %.18e\n", z, i, j, k, term1 + term2 + term3); */
-	  /* printf("z=%d, i=%d, j=%d, k=%d, term1=%.18e, term2=%.18e, term3a=%.18e, term3b=%.18e\n", z, i, j, k, term1, term2, term3a, term3b); */
+	 
+	  /* printf("z=%d, i=%d, j=%d, k=%d, j1=%.18e, j2=%.18e, j3=%.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e, %.18e\n", z, i, j, k, j1, j2, j3, rby_xiplusbbya, df_dxi, onebyr_df_dxi_d, d2r_dxi2, onebyr_d2f_dthetadxi_d, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2f_dphidxi_d, onebyrsintheta_d2r_dphidxi_d, onebyrsq_anglaplacef_d, onebyrsq_anglaplacer_d); */
+          /* printf("z=%d, i=%d, j=%d, k=%d, j1=%.18e, j2=%.18e, j3=%.18e, (1/R^2)lapf=%.18e, (1/R^2)lapr=%.18e\n", z, i, j, k, j1, j2, j3, onebyrsq_anglaplacef_d, onebyrsq_anglaplacer_d); */
+	  /* printf("z=%d, i=%d, j=%d, k=%d, term1=%.18e, term2=%.18e, term3a=%.18e, term3b=%.18e, res=%.18e\n", z, i, j, k, term1, term2, term3a, term3b, res); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, r/(xi+b/a)=%.18e\n", z, i, j, k, rby_xiplusbbya); */
 	  /* printf("z=%d, i=%d, j=%d, k=%d, (1/R^2)anglapR=%.18e, d^2R/dxi^2=%.18e, (1/R)d^2R/dtdx=%.18e, (1/Rsint)d^2R/dpdx=%.18e\n", z, i, j, k,
-	    onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d); */
+	     onebyrsq_anglaplacer_d, d2r_dxi2, onebyr_d2r_dthetadxi_d, onebyrsintheta_d2r_dphidxi_d); */
 	}
       }
     }

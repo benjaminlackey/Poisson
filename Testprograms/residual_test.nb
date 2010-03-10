@@ -21114,7 +21114,7 @@ Cell[BoxData[
 }, Open  ]]
 },
 WindowSize->{1074, 752},
-WindowMargins->{{Automatic, -1172}, {-52, Automatic}},
+WindowMargins->{{Automatic, -1233}, {-69, Automatic}},
 FrontEndVersion->"6.0 for Mac OS X x86 (32-bit) (June 19, 2007)",
 StyleDefinitions->"Default.nb"
 ]
