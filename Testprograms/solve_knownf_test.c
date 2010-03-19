@@ -31,6 +31,8 @@ double field(int z, double r, double theta, double phi);
 
 int main (void)
 {
+  FILE *fpgrid;
+
   int z, i, j, k, imag;
   int L, m;
   int nz = 4;
@@ -129,8 +131,8 @@ int main (void)
   print_vector(beta_vector); 
   gridtofourier_bound(f_bound_coeff, f_scalar2d);
   gridtofourier_bound(g_bound_coeff, g_scalar2d);
-/*   print_bound_coeff(f_bound_coeff); */
-/*   print_bound_coeff(g_bound_coeff); */
+  print_bound_coeff(f_bound_coeff); 
+  print_bound_coeff(g_bound_coeff);
 
   /* evaluate source at gridpoints */
   functiontogrid(source_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, source);
@@ -215,12 +217,26 @@ int main (void)
   /* solves \tilde \Delta f = \tilde \sigma where \tilde \sigma = (\sigma + R(f))/a */
   poisson_iteration(field_solution_scalar3d, source_eff_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   
+  fpgrid=fopen("fofrtp.txt", "w");  
+  for ( z = 0; z < nz; z++ ) {
+    for ( i = 0; i < nr; i++ ) {
+      for ( j = 0; j < nt; j++ ) {
+	for ( k = 0; k < np; k++ ) {
+	  roru = ((z==nz-1) ? 1.0/scalar3d_get(roru_scalar3d, z, i, j, k) : scalar3d_get(roru_scalar3d, z, i, j, k));	  
+	  theta_j = PI*j/(nt-1);
+	  phi_k = 2*PI*k/np;
+	  fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", roru, theta_j, phi_k, scalar3d_get(field_solution_scalar3d, z, i, j, k));
+	}
+      }
+    }
+  }
+  
   /* compare numerical to analytical solution */
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
       for ( j = 0; j < nt; j++ ) {
 	for ( k = 0; k < np; k++ ) {
-	  xi_i = ((z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)));
+	  xi_i = ((z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)));	  
 	  theta_j = PI*j/(nt-1);
 	  phi_k = 2*PI*k/np;
 	  source_eff = scalar3d_get(source_scalar3d, z, i, j, k);
@@ -228,7 +244,7 @@ int main (void)
  	  num = scalar3d_get(field_solution_scalar3d, z, i, j, k);
  	  anal = scalar3d_get(field_scalar3d, z, i, j, k);
 	  error = (num - anal)/anal;
-	  /* printf("z=%d, i=%d, j=%d, k=%d, xi_i=%.18e, theta_j=%.18e, phi_k=%.18e, s_eff=%.18e, res=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, xi_i, theta_j, phi_k, source_eff, residual_d, num, anal, error);*/
+	  printf("z=%d, i=%d, j=%d, k=%d, xi_i=%.18e, theta_j=%.18e, phi_k=%.18e, s_eff=%.18e, res=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, xi_i, theta_j, phi_k, source_eff, residual_d, num, anal, error);
 	}
       }
     }
@@ -264,7 +280,7 @@ int main (void)
 	num = ylm_coeff_get(field_solution_ylm_coeff, z, i, L, m, imag);
 	anal = ylm_coeff_get(field_ylm_coeff, z, i, L, m, imag);
 	error = (num - anal)/anal;
-	/* printf("z=%d, i=%d, L=%d, m=%d, imag=%d, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, L, m, imag, num, anal, error); */
+	/* printf("z=%d, i=%d, L=%d, m=%d, imag=%d, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, L, m, imag, num, anal, error); */ 
       }
     }
   }
@@ -591,7 +607,7 @@ double boundary(int z, double theta, double phi)
   if(z==0) {
     return 1.0;
   } else if (z==1) {
-    return 5.0 + cos(theta);
+    return 5.0 + cos(2.0*theta);
   } else {
     return 10.0;
   }
@@ -667,10 +683,10 @@ double source(int z, double r, double theta, double phi)
 /* } */
 /* double source(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 3; */
-/*   int m1 = 3; */
-/*   int L2 = 4; */
-/*   int m2 = 1; */
+/*   int L1 = 0; */
+/*   int m1 = 0; */
+/*   int L2 = 2; */
+/*   int m2 = 0; */
 /*   double R = 10.0; */
 /*   if(z<3) */
 /*     return pow(r, L1)*((2*L1+3)*(2*L1+5)/pow(R, 2*L1+3) - (4*L1+10)*(2*L1+3)*r*r/pow(R, 2*L1+5)) */
@@ -705,10 +721,10 @@ double field(int z, double r, double theta, double phi)
 /* } */
 /* double field(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 3; */
-/*   int m1 = 3; */
-/*   int L2 = 4; */
-/*   int m2 = 1; */
+/*   int L1 = 0; */
+/*   int m1 = 0; */
+/*   int L2 = 2; */
+/*   int m2 = 0; */
 /*   double R = 10.0; */
 /*   if(z<3) */
 /*     return pow(r, L1)*(0.5*(2*L1+5)*r*r/pow(R, 2*L1+3) - 0.5*(2*L1+3)*pow(r, 4)/pow(R, 2*L1+5)) */

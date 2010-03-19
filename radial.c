@@ -125,7 +125,7 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
   jacobian2(j2_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   jacobian3(j3_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   residual(residual_scalar3d, f_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
-  /*print_scalar3d(residual_scalar3d);*/
+  /* print_scalar3d(residual_scalar3d); */
 
   /* evaluate a and maxa_l */
   for ( z = 0; z < nz; z++ ) {
@@ -212,11 +212,11 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
 /*       for ( j = 0; j < nt; j++ ) { */
 /* 	for ( k = 0; k < np; k++ ) { */
 /* 	  roru_ijk = scalar3d_get(r_scalar3d, z, i, j, k); */
-/* 	  theta_j = PI*j/(nt-1);  */
+/* 	  theta_j = PI*j/(nt-1); */
 /* 	  x_j = cos(theta_j); */
-/* 	  phi_k = 2*PI*k/np;	 */
+/* 	  phi_k = 2*PI*k/np; */
 	  
-/* 	  /\* begin sum over all spherical harmonics *\/	   */
+/* 	  /\* begin sum over all spherical harmonics *\/ */
 /* 	  fhomo = 0.0; */
 /* 	  for ( imag=0; imag<=1; imag++ ) { */
 /* 	    for ( m = imag; m < nt-imag; m++ ) { */
@@ -232,9 +232,9 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
 /* 		if(z==0) { /\* in kernel *\/ */
 /* 		  fhomo += A_lm * pow(roru_ijk, L) * ylm_jk; */
 /* 		} else if(z==nz-1) { /\* in external zone *\/ */
-/* 		  fhomo += B_lm * pow(roru_ijk, (L+1)) * ylm_jk;		  */
+/* 		  fhomo += B_lm * pow(roru_ijk, (L+1)) * ylm_jk; */
 /* 		} else { /\* in a shell *\/ */
-/* 		  fhomo += (A_lm * pow(roru_ijk, L) + B_lm * pow(roru_ijk, -(L+1))) * ylm_jk;		  */
+/* 		  fhomo += (A_lm * pow(roru_ijk, L) + B_lm * pow(roru_ijk, -(L+1))) * ylm_jk; */
 /* 		} */
 /* 	      } */
 /* 	    } */
@@ -354,12 +354,12 @@ void effective_source(scalar3d *s_eff_scalar3d, scalar3d *f_scalar3d, scalar3d *
 /*     for ( i = 0; i < nr; i++ ) { */
 /*       for ( j = 0; j < nt; j++ ) { */
 /* 	for ( k = 0; k < np; k++ ) { */
-/* 	  scalar3d_set(field_scalar3d, z, i, j, k,  */
+/* 	  scalar3d_set(field_scalar3d, z, i, j, k, */
 /* 		       scalar3d_get(particular_scalar3d, z, i, j, k) + scalar3d_get(homo_scalar3d, z, i, j, k)); */
 /* 	} */
 /*       } */
 /*     } */
-/*   }   */
+/*   } */
   
 /*   /\* free memory *\/ */
 /*   radial_matrix_free(nz, nt, radial_matrix); */
@@ -460,6 +460,8 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
 	    gsl_matrix_set(source_matrix, z, i, ylm_coeff_get(source_ylm_coeff, z, i, L, m, imag));
 	  }
 	}
+	/* printf("L=%d, m=%d, imag=%d\n", L, m, imag); */
+/* 	print_matrix(source_matrix); */
 	gsl_matrix_set_zero(particular_matrix);
 	solve_radial_particular(L, radial_matrix, alpha_vector, beta_vector, source_matrix, particular_matrix);
 	for ( z = 0; z < nz; z++ ) {
@@ -469,6 +471,9 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
 	}
 	/* Solve homogeneous part */
 	solve_radial_homogeneous(L, alpha_vector, beta_vector, particular_matrix, homo_grow_vector, homo_decay_vector);
+/* 	print_matrix(particular_matrix); */
+/* 	print_vector(homo_grow_vector); */
+/* 	print_vector(homo_decay_vector); */
 	for ( z = 0; z < nz; z++ ) {
 	  ylm_coeff_set(homo_grow_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_grow_vector, z));
 	  ylm_coeff_set(homo_decay_ylm_coeff, z, 0, L, m, imag, gsl_vector_get(homo_decay_vector, z));
@@ -477,9 +482,10 @@ void poisson_iteration(scalar3d *field_scalar3d, scalar3d *s_eff_scalar3d, gsl_v
     }
   }
 
-  /* Convert homogeneous solution from radial functions to coefficients in (xi, theta, phi) coordinate system */  
+  /* Convert homogeneous solution from radial functions (of zeta) to coefficients in (xi, theta, phi) coordinate system */
   homogeneoustochebyshev(homo_grow_ylm_coeff, homo_decay_ylm_coeff, alpha_vector, beta_vector, homogeneous_ylm_coeff);
-  
+ /*  print_ylm_coeff(homogeneous_ylm_coeff); */
+
   /* field = particular + homogeneous */
   for ( imag=0; imag<=1; imag++ ) {
     for ( m = imag; m < nt-imag; m++ ) {
@@ -709,15 +715,13 @@ void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gs
   int nz = particular_m->size1; /* number of zones (must be >= 2) */
   int nr = particular_m->size2;
   
-  double R;
-  double alpha;
-
-  double fin;
-  double dfin;
-  double fout;
-  double dfout;
+  double alpha, beta;
+  double zeta_in, zeta_out;
+  double f_in, f_out;
+  double dfdzeta_in, dfdzeta_out;
   
-  gsl_vector *boundary = gsl_vector_calloc (nz-1);
+  gsl_vector *zeta_in_v = gsl_vector_calloc (nz); /* value of zeta on the inner zone */
+  gsl_vector *zeta_out_v = gsl_vector_calloc (nz); /* value of zeta on the outer zone */
   
   gsl_matrix *cont_m = gsl_matrix_calloc (2*nz-2, 2*nz-2); /* set elements to zero */
   gsl_vector *cont_v = gsl_vector_calloc (2*nz-2);
@@ -733,18 +737,24 @@ void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gs
   /* 1...nz-3 are indices of boundaries between two shells */
   /* nz-2 is index of boundary between last shell and external domain */
   
-  /* Determine radial positions of the boundaries */
-  /* !!This will need to be modified to include the F, G functions in the equation for the boundaries */
-  /* when using non spherical boundaries!! */
-  for(z=0; z<=nz-2; z++) {
-    if(z==0) {
-      gsl_vector_set(boundary, 0, gsl_vector_get(alpha_v, 0));
-    } else {
-      gsl_vector_set(boundary, z, gsl_vector_get(alpha_v, z) + gsl_vector_get(beta_v, z));
-    }
+  /* Determine values of zeta = alpha*xi + beta or 1/(alpha*(xi-1)) for matching for inside and outside zones */
+  for(z=0; z<nz-1; z++) {
+    alpha = gsl_vector_get(alpha_v, z);
+    beta = gsl_vector_get(beta_v, z);
+    /* zeta_in = alpha*(+1) + beta */  
+    zeta_in = (z==0 ? alpha : alpha + beta );
+    gsl_vector_set(zeta_in_v, z, zeta_in);
   }
-  
-  
+  for(z=1; z<nz; z++) {
+    alpha = gsl_vector_get(alpha_v, z);
+    beta = gsl_vector_get(beta_v, z);
+    /* zeta_out = alpha*(-1) + beta */    
+    zeta_out = (z==nz-1 ? 1.0/(-2.0*alpha) : -alpha + beta);
+    gsl_vector_set(zeta_out_v, z, zeta_out);
+  } 
+  /* print_vector(zeta_in_v); */
+  /* print_vector(zeta_out_v); */
+
   /*>>>>>>>>>>>>>>> set values for the matrix cont_m in the continuity equation <<<<<<<<<<<<<<*/
   
   if(nz < 2){ /* error */
@@ -754,165 +764,151 @@ void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gs
   }else if(nz == 2){ /* there is only a kernel and an external domain */
     
     /* row for continuity */
-    gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(boundary, 0), L));
-    gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(boundary, 0), -L-1));
+    gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(zeta_in_v, 0), L));
+    gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(zeta_out_v, 1), -L-1));
     /* row for continuity of 1st derivative */
-    gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(boundary, 0), L-1));
-    gsl_matrix_set(cont_m, 1, 1, (L+1)*pow(gsl_vector_get(boundary, 0), -L-2));
+    gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(zeta_in_v, 0), L-1));
+    gsl_matrix_set(cont_m, 1, 1, (L+1)*pow(gsl_vector_get(zeta_out_v, 1), -L-2));
     
   }else{ /* there are shells */
     
     /* internal boundary: */
     /* row for continuity */
-    gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(boundary, 0), L));
-    gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(boundary, 0), L));
-    gsl_matrix_set(cont_m, 0, 2, -pow(gsl_vector_get(boundary, 0), -L-1));
+    gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(zeta_in_v, 0), L));
+    gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(zeta_out_v, 1), L));
+    gsl_matrix_set(cont_m, 0, 2, -pow(gsl_vector_get(zeta_out_v, 1), -L-1));
     /* row for continuity of 1st derivative */
-    gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(boundary, 0), L-1));
-    gsl_matrix_set(cont_m, 1, 1, -L*pow(gsl_vector_get(boundary, 0), L-1));
-    gsl_matrix_set(cont_m, 1, 2, (L+1)*pow(gsl_vector_get(boundary, 0), -L-2));
+    gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(zeta_in_v, 0), L-1));
+    gsl_matrix_set(cont_m, 1, 1, -L*pow(gsl_vector_get(zeta_out_v, 1), L-1));
+    gsl_matrix_set(cont_m, 1, 2, (L+1)*pow(gsl_vector_get(zeta_out_v, 1), -L-2));
     
     /* shell boundaries: */
     
     for(z=1; z<=nz-3; z++){
       /* row for continuity */
-      gsl_matrix_set(cont_m, 2*z, 2*z-1, pow(gsl_vector_get(boundary, z), L));
-      gsl_matrix_set(cont_m, 2*z, 2*z, pow(gsl_vector_get(boundary, z), -L-1)); /* bug: was -L+1 */
-      gsl_matrix_set(cont_m, 2*z, 2*z+1, -pow(gsl_vector_get(boundary, z), L));
-      gsl_matrix_set(cont_m, 2*z, 2*z+2, -pow(gsl_vector_get(boundary, z), -L-1));
+      gsl_matrix_set(cont_m, 2*z, 2*z-1, pow(gsl_vector_get(zeta_in_v, z), L));
+      gsl_matrix_set(cont_m, 2*z, 2*z, pow(gsl_vector_get(zeta_in_v, z), -L-1)); /* bug: was -L+1 */
+      gsl_matrix_set(cont_m, 2*z, 2*z+1, -pow(gsl_vector_get(zeta_out_v, z+1), L));
+      gsl_matrix_set(cont_m, 2*z, 2*z+2, -pow(gsl_vector_get(zeta_out_v, z+1), -L-1));
       /* row for continuity of 1st derivative */
-      gsl_matrix_set(cont_m, 2*z+1, 2*z-1, L*pow(gsl_vector_get(boundary, z), L-1));
-      gsl_matrix_set(cont_m, 2*z+1, 2*z, -(L+1)*pow(gsl_vector_get(boundary, z), -L-2));
-      gsl_matrix_set(cont_m, 2*z+1, 2*z+1, -L*pow(gsl_vector_get(boundary, z), L-1));
-      gsl_matrix_set(cont_m, 2*z+1, 2*z+2, (L+1)*pow(gsl_vector_get(boundary, z), -L-2));
+      gsl_matrix_set(cont_m, 2*z+1, 2*z-1, L*pow(gsl_vector_get(zeta_in_v, z), L-1));
+      gsl_matrix_set(cont_m, 2*z+1, 2*z, -(L+1)*pow(gsl_vector_get(zeta_in_v, z), -L-2));
+      gsl_matrix_set(cont_m, 2*z+1, 2*z+1, -L*pow(gsl_vector_get(zeta_out_v, z+1), L-1));
+      gsl_matrix_set(cont_m, 2*z+1, 2*z+2, (L+1)*pow(gsl_vector_get(zeta_out_v, z+1), -L-2));
     }
     
     /* external boundary: */
     /* row for continuity */
-    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-5, pow(gsl_vector_get(boundary, nz-2), L));
-    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-4, pow(gsl_vector_get(boundary, nz-2), -L-1));
-    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-3, -pow(gsl_vector_get(boundary, nz-2), -L-1));
+    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-5, pow(gsl_vector_get(zeta_in_v, nz-2), L));
+    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-4, pow(gsl_vector_get(zeta_in_v, nz-2), -L-1));
+    gsl_matrix_set(cont_m, 2*nz-4, 2*nz-3, -pow(gsl_vector_get(zeta_out_v, nz-1), -L-1));
     /* row for continuity of 1st derivative */
-    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-5, L*pow(gsl_vector_get(boundary, nz-2), L-1));
-    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-4, -(L+1)*pow(gsl_vector_get(boundary, nz-2), -L-2));
-    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-3, (L+1)*pow(gsl_vector_get(boundary, nz-2), -L-2));
+    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-5, L*pow(gsl_vector_get(zeta_in_v, nz-2), L-1));
+    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-4, -(L+1)*pow(gsl_vector_get(zeta_in_v, nz-2), -L-2));
+    gsl_matrix_set(cont_m, 2*nz-3, 2*nz-3, (L+1)*pow(gsl_vector_get(zeta_out_v, nz-1), -L-2));
     
   }
   
-  /*print_matrix(cont_m);*/
+  /* print_matrix(cont_m); */
   
   /*>>>>>>>>>>>>>>> set values for the vector cont_v in the continuity equation <<<<<<<<<<<<<<*/
 
-  /*!!!!!THE FOLLOWING DOES NOT SUM FROM SMALLEST TO GREATEST!!!!!! It could matter*/
-
   if(nz == 2){ /* there is only a kernel and an external domain */
     
-    fin = dfin = fout = dfout = 0;
-    R = gsl_vector_get(boundary, 0);
+    f_in = dfdzeta_in = f_out = dfdzeta_out = 0;
     /* function and derivative on inside: */
-    alpha = R;
+    alpha = gsl_vector_get(alpha_v, 0);
     if(!(L%2)){ /* L is even */
       for(i=0; i<nr; i++){
-	fin += gsl_matrix_get(particular_m, 0, i);
-	dfin += 4*i*i*gsl_matrix_get(particular_m, 0, i);
+	f_in += gsl_matrix_get(particular_m, 0, i);
+	dfdzeta_in += (4*i*i/alpha)*gsl_matrix_get(particular_m, 0, i);
       }
-      dfin /= alpha;
     } else { /* L is odd */
       for(i=0; i<nr; i++){
-	fin += gsl_matrix_get(particular_m, 0, i);
-	dfin += (2*i+1)*(2*i+1)*gsl_matrix_get(particular_m, 0, i);
+	f_in += gsl_matrix_get(particular_m, 0, i);
+	dfdzeta_in += ((2*i+1)*(2*i+1)/alpha)*gsl_matrix_get(particular_m, 0, i);
       }
-      dfin /= alpha;
     }
     /* function and derivative on outside: */
-    alpha = -0.5/R;
+    alpha = gsl_vector_get(alpha_v, 1);
+    zeta_out = gsl_vector_get(zeta_out_v, 1);
     for(i=0; i<nr; i++){
-      fout += neg1toi(i)*gsl_matrix_get(particular_m, 1, i);
-      dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, 1, i);
+      f_out += neg1toi(i)*gsl_matrix_get(particular_m, 1, i);
+      dfdzeta_out += (neg1toi(i+1)*i*i/(-alpha*zeta_out*zeta_out)) * gsl_matrix_get(particular_m, 1, i);
     }
-    dfout /= -(alpha*R*R);
     
-    gsl_vector_set(cont_v, 0, -fin+fout);
-    gsl_vector_set(cont_v, 1, -dfin+dfout);
+    gsl_vector_set(cont_v, 0, -f_in + f_out);
+    gsl_vector_set(cont_v, 1, -dfdzeta_in + dfdzeta_out);
     
   }else{ /* there are shells */
     
     /* interface between kernel and first shell */
-    fin = dfin = fout = dfout = 0;
+    f_in = dfdzeta_in = f_out = dfdzeta_out = 0;
     /* function and derivative on inside: */
-    R = gsl_vector_get(boundary, 0);
-    alpha = R;
+    alpha = gsl_vector_get(alpha_v, 0);
     if(!(L%2)){ /* L is even */
       for(i=0; i<nr; i++){
-	fin += gsl_matrix_get(particular_m, 0, i);
-	dfin += 4*i*i*gsl_matrix_get(particular_m, 0, i);
+	f_in += gsl_matrix_get(particular_m, 0, i);
+	dfdzeta_in += (4*i*i/alpha)*gsl_matrix_get(particular_m, 0, i);
       }
-      dfin /= alpha;
     } else { /* L is odd */
       for(i=0; i<nr; i++){
-	fin += gsl_matrix_get(particular_m, 0, i);
-	dfin += (2*i+1)*(2*i+1)*gsl_matrix_get(particular_m, 0, i);
+	f_in += gsl_matrix_get(particular_m, 0, i);
+	dfdzeta_in += ((2*i+1)*(2*i+1)/alpha)*gsl_matrix_get(particular_m, 0, i);
       }
-      dfin /= alpha;
     }
     /* function and derivative on outside: */
-    alpha = 0.5*(gsl_vector_get(boundary, 1)-R);
+    alpha = gsl_vector_get(alpha_v, 1);
     for(i=0; i<nr; i++){
-      fout += neg1toi(i)*gsl_matrix_get(particular_m, 1, i);
-      dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, 1, i);
+      f_out += neg1toi(i)*gsl_matrix_get(particular_m, 1, i);
+      dfdzeta_out += (neg1toi(i+1)*i*i/alpha)*gsl_matrix_get(particular_m, 1, i);
     }
-    dfout /= alpha;
     
-    gsl_vector_set(cont_v, 0, -fin+fout);
-    gsl_vector_set(cont_v, 1, -dfin+dfout);
+    gsl_vector_set(cont_v, 0, -f_in + f_out);
+    gsl_vector_set(cont_v, 1, -dfdzeta_in + dfdzeta_out);
     
     /* interface between shells */
     /* (skipped if nz<=3) */
     for(z=1; z<=nz-3; z++){
-      fin = dfin = fout = dfout = 0;
-      R = gsl_vector_get(boundary, z);
+      f_in = dfdzeta_in = f_out = dfdzeta_out = 0;
       /* function and derivative on inside: */
-      alpha = 0.5*(R-gsl_vector_get(boundary, z-1));
+      alpha = gsl_vector_get(alpha_v, z);
       for(i=0; i<nr; i++){
-	fin += gsl_matrix_get(particular_m, z, i);
-	dfin += i*i*gsl_matrix_get(particular_m, z, i);
+	f_in += gsl_matrix_get(particular_m, z, i);
+	dfdzeta_in += (i*i/alpha)*gsl_matrix_get(particular_m, z, i);
       }
-      dfin /= alpha;
       /* function and derivative on outside: */
-      alpha = 0.5*(gsl_vector_get(boundary, z+1)-R);
+      alpha = gsl_vector_get(alpha_v, z+1);
       for(i=0; i<nr; i++){
-	fout += neg1toi(i)*gsl_matrix_get(particular_m, z+1, i);
-	dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, z+1, i);
+	f_out += neg1toi(i)*gsl_matrix_get(particular_m, z+1, i);
+	dfdzeta_out += (neg1toi(i+1)*i*i/alpha)*gsl_matrix_get(particular_m, z+1, i);
       }
-      dfout /= alpha;
       
-      gsl_vector_set(cont_v, 2*z, -fin+fout);
-      gsl_vector_set(cont_v, 2*z+1, -dfin+dfout);
+      gsl_vector_set(cont_v, 2*z, -f_in + f_out);
+      gsl_vector_set(cont_v, 2*z+1, -dfdzeta_in + dfdzeta_out);
     }
     
     /* interface between last shell and external domain */
-    fin = dfin = fout = dfout = 0;
-    R = gsl_vector_get(boundary, nz-2);
+    f_in = dfdzeta_in = f_out = dfdzeta_out = 0;
     /* function and derivative on inside: */
-    alpha = 0.5*(R-gsl_vector_get(boundary, nz-3));
+    alpha = gsl_vector_get(alpha_v, nz-2);
     for(i=0; i<nr; i++){
-      fin += gsl_matrix_get(particular_m, nz-2, i);
-      dfin += i*i*gsl_matrix_get(particular_m, nz-2, i);
+      f_in += gsl_matrix_get(particular_m, nz-2, i);
+      dfdzeta_in += (i*i/alpha)*gsl_matrix_get(particular_m, nz-2, i);
     }
-    dfin /= alpha;
     /* function and derivative on outside: */
-    alpha = -0.5/R;
+    alpha = gsl_vector_get(alpha_v, nz-1);
+    zeta_out = gsl_vector_get(zeta_out_v, nz-1);
     for(i=0; i<nr; i++){
-      fout += neg1toi(i)*gsl_matrix_get(particular_m, nz-1, i);
-      dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, nz-1, i);
+      f_out += neg1toi(i)*gsl_matrix_get(particular_m, nz-1, i);
+      dfdzeta_out += (neg1toi(i+1)*i*i/(-alpha*zeta_out*zeta_out)) * gsl_matrix_get(particular_m, nz-1, i);
     }
-    dfout /= -(alpha*R*R);
     
-    gsl_vector_set(cont_v, 2*nz-4, -fin+fout);
-    gsl_vector_set(cont_v, 2*nz-3, -dfin+dfout);
+    gsl_vector_set(cont_v, 2*nz-4, -f_in + f_out);
+    gsl_vector_set(cont_v, 2*nz-3, -dfdzeta_in + dfdzeta_out);
   }
   
-  /*print_vector(cont_v);*/
+  /* print_vector(cont_v); */
   
   /*>>>>>>>>>>>>>> Solve equation for continuity <<<<<<<<<<<<<<<<<*/
   
@@ -920,6 +916,7 @@ void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gs
   gsl_linalg_LU_decomp (cont_m, permute, &luint);
   gsl_linalg_LU_solve (cont_m, permute, cont_v, homo_coeff);
   
+  /* print_vector(homo_coeff); */
   /* Place elements of homo_coeff into homo_grow_v, homo_decay_v */
   
   gsl_vector_set(homo_grow_v, 0, gsl_vector_get(homo_coeff, 0));
@@ -932,12 +929,257 @@ void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gs
   gsl_vector_set(homo_decay_v, nz-1, gsl_vector_get(homo_coeff, 2*nz-3));
   
   /* free memory */
-  gsl_vector_free(boundary);
+  gsl_vector_free(zeta_in_v);
+  gsl_vector_free(zeta_out_v); 
   gsl_matrix_free(cont_m);
   gsl_vector_free(cont_v);
   gsl_vector_free(homo_coeff);
   gsl_permutation_free(permute);
 }
+
+
+/* /\********************************************************************\/ */
+/* /\* Find coefficients for homogeneous solution to satisfy continuity *\/ */
+/* /\* given the particular solution particular_m.                      *\/ */
+/* /\* Returns homo_grow_v = (A_0, A_1,..., A_{nz-2}, 0)                *\/ */
+/* /\* and homo_decay_v = (0, B_1,..., B_{nz-2}, B_{nz-1})              *\/ */
+/* /\********************************************************************\/ */
+/* void solve_radial_homogeneous(int L, gsl_vector *alpha_v, gsl_vector *beta_v, gsl_matrix *particular_m, gsl_vector *homo_grow_v, gsl_vector *homo_decay_v) */
+/* { */
+/*   int z; */
+/*   int i; */
+/*   int nz = particular_m->size1; /\* number of zones (must be >= 2) *\/ */
+/*   int nr = particular_m->size2; */
+  
+/*   double R; */
+/*   double alpha; */
+
+/*   double fin; */
+/*   double dfin; */
+/*   double fout; */
+/*   double dfout; */
+  
+/*   gsl_vector *boundary = gsl_vector_calloc (nz-1); */
+  
+/*   gsl_matrix *cont_m = gsl_matrix_calloc (2*nz-2, 2*nz-2); /\* set elements to zero *\/ */
+/*   gsl_vector *cont_v = gsl_vector_calloc (2*nz-2); */
+/*   gsl_vector *homo_coeff = gsl_vector_calloc (2*nz-2); */
+  
+/*   int luint; */
+/*   gsl_permutation *permute = gsl_permutation_alloc (2*nz-2); */
+  
+/*   /\* nz zones *\/ */
+/*   /\* nz-1 boundaries between zones *\/ */
+/*   /\* nz-2 is index of last boundary in boundary vector *\/ */
+/*   /\* 0 is index of boundary between kernal and 1st shell *\/ */
+/*   /\* 1...nz-3 are indices of boundaries between two shells *\/ */
+/*   /\* nz-2 is index of boundary between last shell and external domain *\/ */
+  
+/*   /\* Determine radial positions of the boundaries *\/ */
+/*   /\* !!This will need to be modified to include the F, G functions in the equation for the boundaries *\/ */
+/*   /\* when using non spherical boundaries!! *\/ */
+/*   for(z=0; z<=nz-2; z++) { */
+/*     if(z==0) { */
+/*       gsl_vector_set(boundary, 0, gsl_vector_get(alpha_v, 0)); */
+/*     } else { */
+/*       gsl_vector_set(boundary, z, gsl_vector_get(alpha_v, z) + gsl_vector_get(beta_v, z)); */
+/*     } */
+/*   } */
+  
+  
+/*   /\*>>>>>>>>>>>>>>> set values for the matrix cont_m in the continuity equation <<<<<<<<<<<<<<*\/ */
+  
+/*   if(nz < 2){ /\* error *\/ */
+    
+/*     printf("There must be at least 2 zones"); */
+    
+/*   }else if(nz == 2){ /\* there is only a kernel and an external domain *\/ */
+    
+/*     /\* row for continuity *\/ */
+/*     gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(boundary, 0), L)); */
+/*     gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(boundary, 0), -L-1)); */
+/*     /\* row for continuity of 1st derivative *\/ */
+/*     gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(boundary, 0), L-1)); */
+/*     gsl_matrix_set(cont_m, 1, 1, (L+1)*pow(gsl_vector_get(boundary, 0), -L-2)); */
+    
+/*   }else{ /\* there are shells *\/ */
+    
+/*     /\* internal boundary: *\/ */
+/*     /\* row for continuity *\/ */
+/*     gsl_matrix_set(cont_m, 0, 0, pow(gsl_vector_get(boundary, 0), L)); */
+/*     gsl_matrix_set(cont_m, 0, 1, -pow(gsl_vector_get(boundary, 0), L)); */
+/*     gsl_matrix_set(cont_m, 0, 2, -pow(gsl_vector_get(boundary, 0), -L-1)); */
+/*     /\* row for continuity of 1st derivative *\/ */
+/*     gsl_matrix_set(cont_m, 1, 0, L*pow(gsl_vector_get(boundary, 0), L-1)); */
+/*     gsl_matrix_set(cont_m, 1, 1, -L*pow(gsl_vector_get(boundary, 0), L-1)); */
+/*     gsl_matrix_set(cont_m, 1, 2, (L+1)*pow(gsl_vector_get(boundary, 0), -L-2)); */
+    
+/*     /\* shell boundaries: *\/ */
+    
+/*     for(z=1; z<=nz-3; z++){ */
+/*       /\* row for continuity *\/ */
+/*       gsl_matrix_set(cont_m, 2*z, 2*z-1, pow(gsl_vector_get(boundary, z), L)); */
+/*       gsl_matrix_set(cont_m, 2*z, 2*z, pow(gsl_vector_get(boundary, z), -L-1)); /\* bug: was -L+1 *\/ */
+/*       gsl_matrix_set(cont_m, 2*z, 2*z+1, -pow(gsl_vector_get(boundary, z), L)); */
+/*       gsl_matrix_set(cont_m, 2*z, 2*z+2, -pow(gsl_vector_get(boundary, z), -L-1)); */
+/*       /\* row for continuity of 1st derivative *\/ */
+/*       gsl_matrix_set(cont_m, 2*z+1, 2*z-1, L*pow(gsl_vector_get(boundary, z), L-1)); */
+/*       gsl_matrix_set(cont_m, 2*z+1, 2*z, -(L+1)*pow(gsl_vector_get(boundary, z), -L-2)); */
+/*       gsl_matrix_set(cont_m, 2*z+1, 2*z+1, -L*pow(gsl_vector_get(boundary, z), L-1)); */
+/*       gsl_matrix_set(cont_m, 2*z+1, 2*z+2, (L+1)*pow(gsl_vector_get(boundary, z), -L-2)); */
+/*     } */
+    
+/*     /\* external boundary: *\/ */
+/*     /\* row for continuity *\/ */
+/*     gsl_matrix_set(cont_m, 2*nz-4, 2*nz-5, pow(gsl_vector_get(boundary, nz-2), L)); */
+/*     gsl_matrix_set(cont_m, 2*nz-4, 2*nz-4, pow(gsl_vector_get(boundary, nz-2), -L-1)); */
+/*     gsl_matrix_set(cont_m, 2*nz-4, 2*nz-3, -pow(gsl_vector_get(boundary, nz-2), -L-1)); */
+/*     /\* row for continuity of 1st derivative *\/ */
+/*     gsl_matrix_set(cont_m, 2*nz-3, 2*nz-5, L*pow(gsl_vector_get(boundary, nz-2), L-1)); */
+/*     gsl_matrix_set(cont_m, 2*nz-3, 2*nz-4, -(L+1)*pow(gsl_vector_get(boundary, nz-2), -L-2)); */
+/*     gsl_matrix_set(cont_m, 2*nz-3, 2*nz-3, (L+1)*pow(gsl_vector_get(boundary, nz-2), -L-2)); */
+    
+/*   } */
+  
+/*   /\*print_matrix(cont_m);*\/ */
+  
+/*   /\*>>>>>>>>>>>>>>> set values for the vector cont_v in the continuity equation <<<<<<<<<<<<<<*\/ */
+
+/*   /\*!!!!!THE FOLLOWING DOES NOT SUM FROM SMALLEST TO GREATEST!!!!!! It could matter*\/ */
+
+/*   if(nz == 2){ /\* there is only a kernel and an external domain *\/ */
+    
+/*     fin = dfin = fout = dfout = 0; */
+/*     R = gsl_vector_get(boundary, 0); */
+/*     /\* function and derivative on inside: *\/ */
+/*     alpha = R; */
+/*     if(!(L%2)){ /\* L is even *\/ */
+/*       for(i=0; i<nr; i++){ */
+/* 	fin += gsl_matrix_get(particular_m, 0, i); */
+/* 	dfin += 4*i*i*gsl_matrix_get(particular_m, 0, i); */
+/*       } */
+/*       dfin /= alpha; */
+/*     } else { /\* L is odd *\/ */
+/*       for(i=0; i<nr; i++){ */
+/* 	fin += gsl_matrix_get(particular_m, 0, i); */
+/* 	dfin += (2*i+1)*(2*i+1)*gsl_matrix_get(particular_m, 0, i); */
+/*       } */
+/*       dfin /= alpha; */
+/*     } */
+/*     /\* function and derivative on outside: *\/ */
+/*     alpha = -0.5/R; */
+/*     for(i=0; i<nr; i++){ */
+/*       fout += neg1toi(i)*gsl_matrix_get(particular_m, 1, i); */
+/*       dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, 1, i); */
+/*     } */
+/*     dfout /= -(alpha*R*R); */
+    
+/*     gsl_vector_set(cont_v, 0, -fin+fout); */
+/*     gsl_vector_set(cont_v, 1, -dfin+dfout); */
+    
+/*   }else{ /\* there are shells *\/ */
+    
+/*     /\* interface between kernel and first shell *\/ */
+/*     fin = dfin = fout = dfout = 0; */
+/*     /\* function and derivative on inside: *\/ */
+/*     R = gsl_vector_get(boundary, 0); */
+/*     alpha = R; */
+/*     if(!(L%2)){ /\* L is even *\/ */
+/*       for(i=0; i<nr; i++){ */
+/* 	fin += gsl_matrix_get(particular_m, 0, i); */
+/* 	dfin += 4*i*i*gsl_matrix_get(particular_m, 0, i); */
+/*       } */
+/*       dfin /= alpha; */
+/*     } else { /\* L is odd *\/ */
+/*       for(i=0; i<nr; i++){ */
+/* 	fin += gsl_matrix_get(particular_m, 0, i); */
+/* 	dfin += (2*i+1)*(2*i+1)*gsl_matrix_get(particular_m, 0, i); */
+/*       } */
+/*       dfin /= alpha; */
+/*     } */
+/*     /\* function and derivative on outside: *\/ */
+/*     alpha = 0.5*(gsl_vector_get(boundary, 1)-R); */
+/*     for(i=0; i<nr; i++){ */
+/*       fout += neg1toi(i)*gsl_matrix_get(particular_m, 1, i); */
+/*       dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, 1, i); */
+/*     } */
+/*     dfout /= alpha; */
+    
+/*     gsl_vector_set(cont_v, 0, -fin+fout); */
+/*     gsl_vector_set(cont_v, 1, -dfin+dfout); */
+    
+/*     /\* interface between shells *\/ */
+/*     /\* (skipped if nz<=3) *\/ */
+/*     for(z=1; z<=nz-3; z++){ */
+/*       fin = dfin = fout = dfout = 0; */
+/*       R = gsl_vector_get(boundary, z); */
+/*       /\* function and derivative on inside: *\/ */
+/*       alpha = 0.5*(R-gsl_vector_get(boundary, z-1)); */
+/*       for(i=0; i<nr; i++){ */
+/* 	fin += gsl_matrix_get(particular_m, z, i); */
+/* 	dfin += i*i*gsl_matrix_get(particular_m, z, i); */
+/*       } */
+/*       dfin /= alpha; */
+/*       /\* function and derivative on outside: *\/ */
+/*       alpha = 0.5*(gsl_vector_get(boundary, z+1)-R); */
+/*       for(i=0; i<nr; i++){ */
+/* 	fout += neg1toi(i)*gsl_matrix_get(particular_m, z+1, i); */
+/* 	dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, z+1, i); */
+/*       } */
+/*       dfout /= alpha; */
+      
+/*       gsl_vector_set(cont_v, 2*z, -fin+fout); */
+/*       gsl_vector_set(cont_v, 2*z+1, -dfin+dfout); */
+/*     } */
+    
+/*     /\* interface between last shell and external domain *\/ */
+/*     fin = dfin = fout = dfout = 0; */
+/*     R = gsl_vector_get(boundary, nz-2); */
+/*     /\* function and derivative on inside: *\/ */
+/*     alpha = 0.5*(R-gsl_vector_get(boundary, nz-3)); */
+/*     for(i=0; i<nr; i++){ */
+/*       fin += gsl_matrix_get(particular_m, nz-2, i); */
+/*       dfin += i*i*gsl_matrix_get(particular_m, nz-2, i); */
+/*     } */
+/*     dfin /= alpha; */
+/*     /\* function and derivative on outside: *\/ */
+/*     alpha = -0.5/R; */
+/*     for(i=0; i<nr; i++){ */
+/*       fout += neg1toi(i)*gsl_matrix_get(particular_m, nz-1, i); */
+/*       dfout += neg1toi(i+1)*i*i*gsl_matrix_get(particular_m, nz-1, i); */
+/*     } */
+/*     dfout /= -(alpha*R*R); */
+    
+/*     gsl_vector_set(cont_v, 2*nz-4, -fin+fout); */
+/*     gsl_vector_set(cont_v, 2*nz-3, -dfin+dfout); */
+/*   } */
+  
+/*   /\*print_vector(cont_v);*\/ */
+  
+/*   /\*>>>>>>>>>>>>>> Solve equation for continuity <<<<<<<<<<<<<<<<<*\/ */
+  
+/*   /\* Solve for homo_coeff in cont_m.homo_coeff = cont_v *\/ */
+/*   gsl_linalg_LU_decomp (cont_m, permute, &luint); */
+/*   gsl_linalg_LU_solve (cont_m, permute, cont_v, homo_coeff); */
+  
+/*   /\* Place elements of homo_coeff into homo_grow_v, homo_decay_v *\/ */
+  
+/*   gsl_vector_set(homo_grow_v, 0, gsl_vector_get(homo_coeff, 0)); */
+/*   gsl_vector_set(homo_decay_v, 0, 0.0); */
+/*   for(z=1; z<=nz-2; z++) { */
+/*     gsl_vector_set(homo_grow_v, z, gsl_vector_get(homo_coeff, 2*z-1)); */
+/*     gsl_vector_set(homo_decay_v, z, gsl_vector_get(homo_coeff, 2*z)); */
+/*   } */
+/*   gsl_vector_set(homo_grow_v, nz-1, 0.0); */
+/*   gsl_vector_set(homo_decay_v, nz-1, gsl_vector_get(homo_coeff, 2*nz-3)); */
+  
+/*   /\* free memory *\/ */
+/*   gsl_vector_free(boundary); */
+/*   gsl_matrix_free(cont_m); */
+/*   gsl_vector_free(cont_v); */
+/*   gsl_vector_free(homo_coeff); */
+/*   gsl_permutation_free(permute); */
+/* } */
 
 
 /*******************************************************************************/

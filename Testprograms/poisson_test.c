@@ -31,12 +31,14 @@ double field(int z, double r, double theta, double phi);
 
 int main (void)
 {
+  FILE *fpgrid;
+
   int z, i, j, k;
-  int nz = 5;
-  int nr = 35; /* must be odd? */
+  int nz = 4;
+  int nr = 55; /* must be odd? */
   int nt;
-  int np = 24; /* must be even */
-  double r_i, theta_j, phi_k;
+  int np = 30; /* must be even */
+  double r_i, theta_j, phi_k, xi_i, zeta_i;
   scalar2d *boundary_scalar2d;
   scalar2d *f_scalar2d;
   scalar2d *g_scalar2d;
@@ -49,6 +51,7 @@ int main (void)
   scalar3d *source_eff_jm1_scalar3d;
   scalar3d *source_eff_scalar3d;
   int iteration;
+  double alpha, beta;
   double s, num, anal, error;
 
   nt = np/2 + 1;
@@ -71,12 +74,16 @@ int main (void)
   
   /* determine the surface quantities: alpha_vector, beta_vector, f_scalar2d, g_scalar2d */
   map_physicaltogrid(boundary_scalar2d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
+  print_vector(alpha_vector); 
+  print_vector(beta_vector);
   
   /* evaluate source at gridpoints */
   functiontogrid(source_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, source);
-
+  
 /*   /\* evaluate analytical solution at gridpoints *\/ */
 /*   functiontogrid(field_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d, field); */
+
+  /*>>>>>>>>>> START OF ITERATION PROCESS <<<<<<<<<<<*/
 
   /* set initial values for f, s_eff^{j-2}, and s_eff^{j-1} */
   for ( z = 0; z < nz; z++ ) {
@@ -90,7 +97,7 @@ int main (void)
       }
     }
   }
-  for ( iteration = 0; iteration < 1; iteration++ ) {
+  for ( iteration = 0; iteration < 100; iteration++ ) {
     printf("iteration %d:\n", iteration);
 
     /* create the effective source from the actual source, current value of field, and old effective sources */
@@ -108,6 +115,7 @@ int main (void)
 
 
   /* compare numerical to analytical solution */
+  fpgrid=fopen("fofrtp.txt", "w");
   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d);
   for ( z = 0; z < nz; z++ ) {
     for ( i = 0; i < nr; i++ ) {
@@ -122,12 +130,39 @@ int main (void)
 	  error = (num - anal)/anal;
 	  /* printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, num, anal, error); */
 	  printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, s=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, r_i, s, num, anal, error);
+	  fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", r_i, theta_j, phi_k, num);
 	}
       }
     }
   }
 
-
+/*   /\* compare numerical to analytical solution *\/ */
+/*   fpgrid=fopen("fofrtp.txt", "w");   */
+/*   rofxtp(r_scalar3d, alpha_vector, beta_vector, f_scalar2d, g_scalar2d); */
+/*   for ( z = 0; z < nz; z++ ) { */
+/*     for ( i = 0; i < nr; i++ ) { */
+/*       for ( j = 0; j < nt; j++ ) { */
+/* 	for ( k = 0; k < np; k++ ) { */
+/* 	  alpha = gsl_vector_get(alpha_vector, z); */
+/* 	  beta = gsl_vector_get(beta_vector, z); */
+/* 	  xi_i = ( (z==0) ? sin(PI*i/(2.0*(nr-1))) : -cos(PI*i/(nr-1)) );	 */
+/* 	  zeta_i = ( (z==nz-1) ? 1.0/(alpha*(xi_i-1.0)) : alpha*xi_i+beta ); */
+/* 	  r_i = ((z==nz-1) ? 1.0/scalar3d_get(r_scalar3d, z, i, j, k) : scalar3d_get(r_scalar3d, z, i, j, k)); */
+/* 	  theta_j = PI*j/(nt-1); */
+/* 	  phi_k = 2*PI*k/np; */
+/* 	  s = scalar3d_get(source_scalar3d, z, i, j, k); */
+/*  	  num = scalar3d_get(field_scalar3d, z, i, j, k); */
+/*  	  anal = field(z, r_i, theta_j, phi_k); */
+/* 	  error = (num - anal)/anal; */
+/* 	  /\* printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, t_j=%.18e, p_k=%.18e, %.18e, %.18e, %.18e\n", z, i, j, k, r_i, theta_j, phi_k, num, anal, error); *\/ */
+/* 	  /\* printf("z=%d, i=%d, j=%d, k=%d, r_i=%.18e, s=%.18e, f_n=%.18e, f_a=%.18e, err=%.18e\n", z, i, j, k, r_i, s, num, anal, error); *\/ */
+/* 	  printf("%.18e\t%.18e\t%.18e\t%.18e\n", zeta_i, theta_j, phi_k, num); */
+/* 	  fprintf(fpgrid, "%.18e\t%.18e\t%.18e\t%.18e\n", zeta_i, theta_j, phi_k, num); */
+/* 	} */
+/*       } */
+/*     } */
+/*   } */
+  
   scalar2d_free(boundary_scalar2d);
   scalar2d_free(f_scalar2d);
   scalar2d_free(g_scalar2d);
@@ -157,74 +192,97 @@ int main (void)
 /* } */
 double boundary(int z, double theta, double phi)
 {
-  int L1 = 2;
-  int m1 = 1;
-
   if(z==0)
-    return 1.0;
+    return 1.0 + 0.2*cos(2.0*theta);
   else if(z==1)
-    return 5.0*(1.0 + 0.1*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)));
-  else if(z==2)
-    return 10.0;
+    return 5.0 + 1.0*cos(2.0*theta);
   else
-    return 20.0;
+    return 10.0;
 }
-
+double boundary(int z, double theta, double phi)
+{
+  if(z==0)
+    return 10.0;
+  else if(z==1)
+    return 15.0 + 1.0*cos(2.0*theta);
+  else
+    return 20;
+}
 
 /*********************************************/
 /* Source function.   */
 /*********************************************/
-double source(int z, double r, double theta, double phi)
-{
-  double R = 10.0;
-  if(z<3)
-    return (R - r*r/R);
-  else
-    return pow(R, 5)/pow(r, 4);
-}
-
 /* double source(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 5; */
-/*   int m1 = 4; */
-/*   int L2 = 3; */
-/*   int m2 = 0; */
 /*   double R = 10.0; */
-/*   if(z<2) */
-/*     return pow(r, L1)*((2*L1+3)*(2*L1+5)/pow(R, 2*L1+3) - (4*L1+10)*(2*L1+3)*r*r/pow(R, 2*L1+5)) */
-/*       *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)) */
-/*       + pow(r, L2)*((2*L2+3)*(2*L2+5)/pow(R, 2*L2+3) - (4*L2+10)*(2*L2+3)*r*r/pow(R, 2*L2+5)) */
-/*       *gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi)); */
+/*   double rho = 1.0; */
+/*   if(z<3) */
+/*     return rho; */
 /*   else */
 /*     return 0.0; */
 /* } */
+
+/* double source(int z, double r, double theta, double phi) */
+/* { */
+/*   double R = 10.0; */
+/*   if(z<3) */
+/*     return (R - r*r/R); */
+/*   else */
+/*     return pow(R, 5)/pow(r, 4); */
+/* } */
+
+double source(int z, double r, double theta, double phi)
+{
+  int L1 = 0;
+  int m1 = 0;
+  int L2 = 3;
+  int m2 = 2;
+  double R = 10.0;
+  if(z<1)
+    return pow(r, L1)*((2*L1+3)*(2*L1+5)/pow(R, 2*L1+3) - (4*L1+10)*(2*L1+3)*r*r/pow(R, 2*L1+5))
+      *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + pow(r, L2)*((2*L2+3)*(2*L2+5)/pow(R, 2*L2+3) - (4*L2+10)*(2*L2+3)*r*r/pow(R, 2*L2+5))
+      *gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
+  else
+    return 0.0;
+}
 
 
 /**************************************/
 /* Solution to Poisson equation.  */
 /**************************************/
-double field(int z, double r, double theta, double phi)
-{
-  double R = 10.0;
-  if(z<3)
-    return R*r*r/6.0 - pow(r, 4)/(20.0*R) - 3.0*pow(R, 3)/4.0;
-  else
-    return pow(R, 5)/(2.0*r*r) - 17.0*pow(R, 4)/(15.0*r);
-}
+/* double field(int z, double r, double theta, double phi) */
+/* { */
+/*   double R = 10.0; */
+/*   double rho = 1.0; */
+/*   if(z<3) */
+/*     return rho*(-R*R/2.0 + r*r/6.0); */
+/*   else */
+/*     return -rho*R*R*R/(3.0*r); */
+/* } */
 
 /* double field(int z, double r, double theta, double phi) */
 /* { */
-/*   int L1 = 5; */
-/*   int m1 = 4; */
-/*   int L2 = 3; */
-/*   int m2 = 0; */
 /*   double R = 10.0; */
-/*   if(z<2) */
-/*     return pow(r, L1)*(0.5*(2*L1+5)*r*r/pow(R, 2*L1+3) - 0.5*(2*L1+3)*pow(r, 4)/pow(R, 2*L1+5)) */
-/*       *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)) */
-/*       + pow(r, L2)*(0.5*(2*L2+5)*r*r/pow(R, 2*L2+3) - 0.5*(2*L2+3)*pow(r, 4)/pow(R, 2*L2+5)) */
-/*       *gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi)); */
+/*   if(z<3) */
+/*     return R*r*r/6.0 - pow(r, 4)/(20.0*R) - 3.0*pow(R, 3)/4.0; */
 /*   else */
-/*     return (1.0/pow(r, L1+1))*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi)) */
-/*       + (1.0/pow(r, L2+1))*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi)); */
+/*     return pow(R, 5)/(2.0*r*r) - 17.0*pow(R, 4)/(15.0*r); */
 /* } */
+
+double field(int z, double r, double theta, double phi)
+{
+  int L1 = 0;
+  int m1 = 0;
+  int L2 = 3;
+  int m2 = 2;
+  double R = 10.0;
+  if(z<1)
+    return pow(r, L1)*(0.5*(2*L1+5)*r*r/pow(R, 2*L1+3) - 0.5*(2*L1+3)*pow(r, 4)/pow(R, 2*L1+5))
+      *gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + pow(r, L2)*(0.5*(2*L2+5)*r*r/pow(R, 2*L2+3) - 0.5*(2*L2+3)*pow(r, 4)/pow(R, 2*L2+5))
+      *gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
+  else
+    return (1.0/pow(r, L1+1))*gsl_sf_legendre_sphPlm(L1, m1, cos(theta))*(cos(m1*phi) + sin(m1*phi))
+      + (1.0/pow(r, L2+1))*gsl_sf_legendre_sphPlm(L2, m2, cos(theta))*(cos(m2*phi) + sin(m2*phi));
+}
